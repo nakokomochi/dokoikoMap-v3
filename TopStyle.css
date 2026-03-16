@@ -1,0 +1,210 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+
+    background: #111;
+    color: white;
+
+}
+
+.app {
+
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+
+}
+
+.header {
+
+    text-align: center;
+    padding: 40px 20px 20px;
+
+}
+
+.subtitle {
+
+    opacity: 0.8;
+    font-size: 14px;
+
+}
+
+.menu {
+
+    flex: 1;
+
+    max-width: 500px;
+    margin: auto;
+
+    width: 100%;
+
+    padding: 20px;
+
+}
+
+.card {
+
+    background: #1e1e1e;
+
+    border-radius: 16px;
+
+    padding: 22px;
+
+    margin-bottom: 22px;
+
+    border: 1px solid #2a2a2a;
+
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+
+    transition: 0.2s;
+
+}
+
+.card:hover {
+
+    transform: translateY(-4px);
+
+}
+
+.card h2 {
+
+    margin-top: 0;
+
+}
+
+button {
+
+    width: 100%;
+
+    padding: 16px;
+
+    margin-top: 10px;
+
+    font-size: 16px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: linear-gradient(45deg,#ff6a00,#ff8c00);
+
+    color: white;
+
+}
+
+button:active {
+
+    transform: scale(0.98);
+
+}
+
+.footer {
+
+    text-align: center;
+
+    padding: 20px;
+
+    opacity: 0.6;
+
+    font-size: 12px;
+
+}
+
+.site-icon {
+
+  width: 80px;
+
+  height: auto;
+
+  margin-bottom: 8px;
+
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+
+}
+
+@media (max-width:768px){
+
+.menu{
+
+    padding: 16px;
+
+}
+
+.card{
+
+    padding: 20px;
+
+}
+
+button{
+
+    font-size: 18px;
+
+    padding: 18px;
+
+}
+
+}
+
+/* =========================
+📌 ナビゲーション
+========================= */
+
+.page-nav {
+
+  display: flex;
+  gap: 10px;
+
+  padding: 12px 15px;
+
+  background: #000;
+
+  border-bottom: 3px solid #ff6a00;
+
+}
+
+.page-nav button {
+
+  flex: 1;
+
+  height: 50px;
+
+  border-radius: 12px;
+
+  border: none;
+
+  background: #1f1f1f;
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: 0.15s;
+
+}
+
+.page-nav button:hover {
+  background: #ff6a00;
+}
+
+.page-nav button.active {
+
+  background: #ff6a00;
+
+  box-shadow: 0 4px 12px rgba(255,106,0,0.4);
+
+}
+
+.page-nav button:active {
+  transform: scale(0.96);
+}

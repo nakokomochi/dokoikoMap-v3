@@ -1,0 +1,729 @@
+/* ===== ベース設定 ===== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  background: #111111;
+  color: white;
+}
+
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===== タイトル（①） ===== */
+.app-title {
+  flex: 0.8;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  background: #000;
+  border-bottom: 3px solid #ff6a00;
+}
+
+.header{
+
+  display:flex;
+
+  justify-content:center;
+
+  align-items:center;
+
+  gap:14px;
+
+  padding:20px;
+
+}
+
+
+.TitleName{
+
+  margin:0;
+
+  font-size:26px;
+
+  line-height:1.2;
+
+}
+
+.subTitle{
+
+  display:block;
+
+  font-size:16px;
+
+  color:#ff6a00;
+
+  font-weight:normal;
+
+}
+
+/* ===== 入力エリア（②） ===== */
+.panel-top {
+  flex: 1.5;
+  padding: 10px 15px;
+  background: #1a1a1a;
+  border-bottom: 3px solid #ff6a00;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.panel-top input,
+.panel-top select,
+.panel-top button {
+  width: 100%;
+  margin-top: 10px;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: none;
+
+  min-height: 50px;   /* ←スマホで押しやすくする */
+}
+
+.panel-top button {
+  background: #ff6a00;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ===== 地図エリア（④） ===== */
+.panel-map {
+  flex: 3;
+  margin-top: 20px;
+}
+
+#map {
+  width: 100%;
+}
+
+/* =========================
+   📱 スマホ最適化
+========================= */
+@media (max-width: 768px) {
+
+  .panel-top {
+    padding: 18px 20px;
+  }
+
+  .panel-top input,
+  .panel-top select {
+    background: #2a2a2a;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  .panel-top button {
+    padding: 14px;
+    font-size: 17px;
+    border-radius: 14px;
+    background: linear-gradient(45deg, #ff6a00, #ff8800);
+  }
+
+  #map {
+    aspect-ratio: 1 / 1;
+  }
+
+}
+
+/* =========================
+   💻 PC
+========================= */
+@media (min-width: 769px) {
+
+  #map {
+    height: 700px;
+    /* PCは横長 */
+  }
+
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+}
+
+.site-icon {
+  width: 60px;
+  height: auto;
+}
+
+
+.results {
+  background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+  color: #2d3436;
+  padding: 20px;
+  border-radius: 15px;
+  text-align: center;
+
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  align-items: center;
+  margin-top: 30px;
+
+  /* 初期は非表示 */
+  opacity: 0;
+  transform: scale(0.7);
+  pointer-events: none;
+}
+
+/* 表示アニメーション */
+.results.show {
+  animation: popIn 0.6s ease forwards;
+  pointer-events: auto;
+}
+
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotate(-5deg);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1.1) rotate(3deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0);
+  }
+}
+
+/* 🎉 紙吹雪 */
+.confetti {
+  position: fixed;
+  width: 8px;
+  height: 12px;
+  top: -20px;
+  opacity: 0.9;
+  animation: fall linear forwards;
+  z-index: 9999;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.site-description {
+  text-align: center;
+  max-width: 850px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* =========================
+📱 スマホUX強化
+========================= */
+@media (max-width: 768px) {
+
+  /* 入力エリア余白 */
+  .panel-top {
+    padding: 22px 20px;
+    gap: 10px;
+  }
+
+  /* 入力欄タップ領域強化 */
+  .panel-top input,
+  .panel-top select,
+  .panel-top button {
+    padding: 16px;
+    font-size: 18px;
+    margin-top: 12px;
+    min-height: 52px;
+  }
+
+  /* ボタン押しやすく */
+  .panel-top button {
+    font-size: 19px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    min-height: 56px;
+    transition: transform 0.1s;
+  }
+
+  .panel-top button:active {
+    transform: scale(0.97);
+  }
+
+  /* 結果エリアを読みやすく */
+  .results {
+    margin-top: 25px;
+    padding: 26px 20px;
+    font-size: 22px;
+    line-height: 1.5;
+  }
+
+  /* Googleマップボタン */
+  .results a {
+    display: block;
+    margin-top: 14px;
+    padding: 14px;
+    font-size: 18px;
+    border-radius: 12px;
+    background: #0984e3;
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+  }
+
+  /* 地図を少し大きく */
+  #map {
+    aspect-ratio: 1 / 1;
+    border-top: 3px solid #ff6a00;
+  }
+
+}
+
+/* =========================
+📱 Amazon風スマホ入力UI
+========================= */
+@media (max-width: 768px) {
+
+  /* 入力エリア余白 */
+  .panel-top {
+    padding: 24px 20px;
+  }
+
+  /* 入力欄 */
+  .panel-top input,
+  .panel-top select {
+
+    width: 100%;
+    height: 56px;
+
+    padding: 0 16px;
+
+    font-size: 18px;
+
+    background: #2a2a2a;
+    color: white;
+
+    border-radius: 12px;
+    border: 2px solid #444;
+
+    margin-top: 14px;
+
+    transition: all 0.2s ease;
+  }
+
+  /* フォーカス時（Amazon風） */
+  .panel-top input:focus,
+  .panel-top select:focus {
+
+    outline: none;
+
+    border: 2px solid #ff6a00;
+
+    box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.25);
+
+    background: #333;
+  }
+
+  /* ボタン */
+  .panel-top button {
+
+    height: 60px;
+
+    font-size: 19px;
+
+    margin-top: 18px;
+
+    border-radius: 14px;
+
+    background: linear-gradient(45deg, #ff6a00, #ff8c00);
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    transition: transform 0.1s ease;
+  }
+
+  .panel-top button:active {
+    transform: scale(0.97);
+  }
+
+}
+
+/* =========================
+📱 モード切替UX
+========================= */
+
+.mode-switch {
+  display: flex;
+  gap: 10px;
+  padding: 12px 15px;
+}
+
+.mode-switch button {
+
+  flex: 1;
+
+  height: 56px;
+
+  font-size: 17px;
+
+  border-radius: 14px;
+
+  border: 2px solid #ff6a00;
+
+  background: #1f1f1f;
+
+  color: white;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: all 0.15s ease;
+}
+
+/* タップ演出 */
+.mode-switch button:active {
+  transform: scale(0.95);
+}
+
+/* ホバー（PC） */
+.mode-switch button:hover {
+  background: #ff6a00;
+}
+
+/* スマホ最適化 */
+@media (max-width:768px) {
+
+  .mode-switch {
+    padding: 15px;
+    gap: 12px;
+  }
+
+  .mode-switch button {
+
+    height: 60px;
+
+    font-size: 18px;
+
+    letter-spacing: 1px;
+
+    border-radius: 16px;
+
+    background: linear-gradient(45deg, #1f1f1f, #1f1f1f);
+
+    border: none;
+
+    box-shadow: 0 4px 10px rgb(255, 81, 1);
+
+  }
+
+}
+
+/* アクティブモード */
+
+.mode-switch button.active {
+
+  background: #ff5900;
+
+  color: white;
+
+  border: none;
+
+  box-shadow: 0 4px 12px rgba(255, 106, 0, 0.5);
+
+}
+
+.spot-section {
+  text-align: center;
+  margin-top: 40px;
+}
+
+#spotButton {
+  background: #ff6b35;
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  font-size: 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#spotButton:hover {
+  transform: scale(1.05);
+}
+
+#gachaResult {
+  margin-top: 30px;
+}
+
+.hidden{
+  display:none !important;
+}
+
+.spot-card {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 15px auto;
+  max-width: 420px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.genre {
+  font-weight: bold;
+  color: #ff6b35;
+  margin-bottom: 6px;
+}
+
+.spot-name {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.map-btn {
+  background: #4285F4;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.reroll-btn {
+
+  width: 90%;
+  max-width: 400px;
+
+  margin: 20px auto;
+
+  display: block;
+
+  height: 55px;
+
+  font-size: 18px;
+
+  border-radius: 14px;
+
+  border: none;
+
+  background: linear-gradient(45deg, #00b894, #00cec9);
+
+  color: white;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: 0.15s;
+}
+
+.reroll-btn:active {
+  transform: scale(0.95);
+}
+
+/* =========================
+🎲 ガチャ結果UI
+========================= */
+
+.results {
+
+  margin-top: 30px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+
+  align-items: center;
+
+  padding: 10px 15px;
+
+}
+
+/* カード */
+
+.result-item {
+
+  width: 95%;
+  max-width: 420px;
+
+  background: white;
+  color: #2d3436;
+
+  border-radius: 16px;
+
+  padding: 20px;
+
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+
+  text-align: center;
+
+  animation: gachaPop 0.4s ease;
+
+}
+
+/* ジャンル */
+
+.genre {
+
+  font-size: 14px;
+
+  font-weight: bold;
+
+  color: #ff6a00;
+
+  margin-bottom: 6px;
+
+  letter-spacing: 1px;
+
+}
+
+/* スポット名 */
+
+.spot-name {
+
+  font-size: 22px;
+
+  font-weight: bold;
+
+  margin-bottom: 12px;
+
+}
+
+/* GoogleMapボタン */
+
+.map-btn {
+
+  display: inline-block;
+
+  background: #4285F4;
+
+  color: white;
+
+  padding: 10px 18px;
+
+  border-radius: 8px;
+
+  text-decoration: none;
+
+  font-size: 15px;
+
+  font-weight: bold;
+
+  transition: 0.15s;
+
+}
+
+.map-btn:hover {
+  transform: scale(1.05);
+}
+
+/* =========================
+🎰 ガチャ出現アニメ
+========================= */
+
+@keyframes gachaPop {
+
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  60% {
+    transform: scale(1.05);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+}
+
+h1 {
+  font-size: 28px;
+  line-height: 1.3;
+}
+
+@media (max-width: 600px) {
+  h1 {
+    font-size: 24px;
+    line-height: 1.4;
+  }
+}
+
+/* =========================
+📌 ナビゲーション
+========================= */
+
+.page-nav {
+
+  display: flex;
+  gap: 10px;
+
+  padding: 12px 15px;
+
+  background: #000;
+
+  border-bottom: 3px solid #ff6a00;
+
+}
+
+.page-nav button {
+
+  flex: 1;
+
+  height: 50px;
+
+  border-radius: 12px;
+
+  border: none;
+
+  background: #1f1f1f;
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: 0.15s;
+
+}
+
+.page-nav button:hover {
+  background: #ff6a00;
+}
+
+.page-nav button.active {
+
+  background: #ff6a00;
+
+  box-shadow: 0 4px 12px rgba(255,106,0,0.4);
+
+}
+
+.page-nav button:active {
+  transform: scale(0.96);
+}
+
+#map {
+  touch-action: manipulation;
+}

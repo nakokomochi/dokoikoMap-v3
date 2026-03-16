@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>どこいこMap - スポット</title>
+
+<link rel="stylesheet" href="CSS/ChoiceYourRoad.css">
+<link rel="icon" href="dog.png">
+
+</head>
+
+
+<body>
+
+<div class="app">
+
+<header class="header">
+
+<a href="index.html">
+<img src="dog.png" alt="どこいこMapロゴ" class="site-icon">
+</a>
+
+<h1 class="TitleName">
+  どこいこMap
+  <span class="subTitle">スポット版</span>
+</h1>
+
+</header>
+
+
+<nav class="page-nav">
+
+<button onclick="location.href='index.html'">
+TOP
+</button>
+
+<button class="active">
+スポット
+</button>
+
+<button onclick="location.href='area.html'">
+地名
+</button>
+
+</nav>
+
+
+<p class="site-description">
+
+ドライブ・ツーリングスポットをランダムに提案します。<br>
+出発地と移動時間を選択してください。
+
+</p>
+
+
+<section class="panel-top">
+
+<label>出発地の住所：</label><br>
+
+<input id="startLocation" type="text" placeholder="例：東京都渋谷区">
+
+<br>
+
+
+<button onclick="getCurrentLocation()" class="location-btn">
+📍 現在地を使用
+</button>
+
+<p class="notice">
+※現在地は保存されません
+</p>
+
+
+<label>移動時間：</label>
+
+<select id="timeSelect">
+<option value="30">30分</option>
+<option value="60">1時間</option>
+<option value="90">1時間30分</option>
+<option value="120">2時間</option>
+</select>
+
+<br>
+
+
+<label>高速道路/有料道路：</label>
+
+<select id="highway">
+
+<option value="yes">使う</option>
+<option value="no">使わない</option>
+
+</select>
+
+<br>
+
+
+<button onclick="searchSpot()" class="main-button">
+どこいこうかな！
+</button>
+
+
+<div class="results" id="results">
+
+<div id="result1" class="result-item"></div>
+<div id="result2" class="result-item"></div>
+<div id="result3" class="result-item"></div>
+
+</div>
+
+
+<button id="rerollButton" onclick="rerollSpot()" class="reroll-btn hidden">
+🎲 もう一回まわす
+</button>
+
+</section>
+
+
+<section class="panel-map">
+
+<div id="map"></div>
+
+</section>
+
+
+<script src="JS/spot.js"></script>
+
+<script
+src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap"
+async defer>
+</script>
+
+</div>
+
+</body>
+</html>
