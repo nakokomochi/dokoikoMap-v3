@@ -39,10 +39,6 @@ function searchSpot() {
     const time = Number(document.getElementById("timeSelect").value);
     const highway = document.getElementById("highway").value;
 
-    if (time === 30) {
-    highway = "no";
-}
-
     clearResults();
 
     const geocoder = new google.maps.Geocoder();
@@ -389,3 +385,38 @@ function getCurrentLocation() {
     });
 
 }
+
+// ===============================
+// 高速制御
+// ===============================
+function updateHighwayControl() {
+
+    const time =
+        document.getElementById("timeSelect").value;
+
+    const highwaySelect =
+        document.getElementById("highway");
+
+    if (time === "30") {
+
+        highwaySelect.value = "no";
+        highwaySelect.disabled = true;
+
+    } else {
+
+        highwaySelect.disabled = false;
+
+    }
+}
+
+document
+.getElementById("timeSelect")
+.addEventListener(
+    "change",
+    updateHighwayControl
+);
+
+window.addEventListener(
+    "load",
+    updateHighwayControl
+);
