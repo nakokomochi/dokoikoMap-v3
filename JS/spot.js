@@ -13,7 +13,7 @@ const LOCAL_SPEED = 40;
 const TOKYO_STATION_POSITION = {
     center: { lat: 35.681236, lng: 139.767125 },
     zoom: 12,
-    gestureHandling: "cooperative"
+    gestureHandling: "greedy"
 };
 
 // ===============================
@@ -38,6 +38,10 @@ function searchSpot() {
 
     const time = Number(document.getElementById("timeSelect").value);
     const highway = document.getElementById("highway").value;
+
+    if (time === 30) {
+    highway = "no";
+}
 
     clearResults();
 
@@ -270,9 +274,13 @@ function searchNearbySpotByGenre(lat, lng, distance, time, highway, keyword, gen
 🎯ジャンル：${keyword}<br><br>
 
 🚗約${distance.toFixed(1)}km<br>
-⏱ ${time}分 / 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}<br><br>
+⏱ ${time}分 ${
+time === 30
+? "/ 下道のみ"
+: `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
+}<br><br>
 
-<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination_place_id=${spot.place_id}" target="_blank">
+<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}" target="_blank">
 🧭 Googleマップで確認
 </a>
 `;
