@@ -98,13 +98,15 @@ body {
 }
 
 /* ===== 地図エリア（④） ===== */
-.panel-map {
-  flex: 3;
-  margin-top: 20px;
+.panel-map{
+flex:3;
+margin-top:20px;
+height:400px;
 }
 
-#map {
-  width: 100%;
+#map{
+width:100%;
+height:100%;
 }
 
 /* =========================
