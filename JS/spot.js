@@ -15,6 +15,7 @@ const TOKYO_STATION_POSITION = {
     zoom: 12,
     gestureHandling: "greedy"
 };
+const EXCLUDE_DISTANCE_KM = 3;
 
 // ===============================
 // Google Map 初期表示
@@ -214,83 +215,246 @@ function searchThreeGenres(lat, lng, distance, time, highway) {
 }
 
 // ===============================
-// ジャンル検索
+// ジャンル検索（完成版）
 // ===============================
-function searchNearbySpotByGenre(lat, lng, distance, time, highway, keyword, genreName, index, color) {
+function searchNearbySpotByGenre(
+    lat,
+    lng,
+    distance,
+    time,
+    highway,
+    keyword,
+    genreName,
+    index,
+    color,
+    retry = 0
+) {
 
     const service = new google.maps.places.PlacesService(map);
+    const box = document.getElementById(`result${index + 1}`);
+
+    // ---------------------------
+    // 検索パラメータ
+    // ---------------------------
+    let type = "tourist_attraction";
+    let searchKeyword = keyword;
+
+    if (genreName.includes("グルメ")) {
+        type = "restaurant";
+    }
+
+    if (genreName.includes("自然")) {
+        type = "park";
+    }
+
+    if (genreName.includes("観光")) {
+        searchKeyword = keyword + " 観光名所 絶景 展望台 道の駅 神社 寺";
+    }
+
+    // ---------------------------
+    // radius
+    // ---------------------------
+    let radius = Math.max(distance * 1000, 5000);
+
+    if (retry === 1) radius *= 1.8;
+    if (retry === 2) radius *= 2.5;
 
     service.nearbySearch(
         {
             location: { lat: lat, lng: lng },
-            radius: 10000,
-            keyword: keyword,
-            type: "tourist_attraction"
+            radius: radius,
+            keyword: searchKeyword,
+            type: type
         },
+
         function (results, status) {
 
-            const box = document.getElementById(`result${index + 1}`);
+            // ---------------------------
+            // 検索失敗
+            // ---------------------------
+            if (
+                status !== google.maps.places.PlacesServiceStatus.OK ||
+                !results ||
+                results.length === 0
+            ) {
 
-            if (status === google.maps.places.PlacesServiceStatus.OK && results[0]) {
+                if (retry < 2) {
 
-                const spot = results[0];
+                    searchNearbySpotByGenre(
+                        lat,
+                        lng,
+                        distance,
+                        time,
+                        highway,
+                        keyword,
+                        genreName,
+                        index,
+                        color,
+                        retry + 1
+                    );
 
-                const lat = spot.geometry.location.lat();
-                const lng = spot.geometry.location.lng();
-
-                const marker = new google.maps.Marker({
-                    position: { lat, lng },
-                    map: map,
-                    icon: {
-                        url: "dog.png",
-                        scaledSize: new google.maps.Size(50, 50)
-                    }
-                });
-
-                spotMarkers.push(marker);
-
-                const bounds = new google.maps.LatLngBounds();
-
-                if (startMarker) {
-                    bounds.extend(startMarker.getPosition());
+                    return;
                 }
-
-                spotMarkers.forEach(m => {
-                    bounds.extend(m.getPosition());
-                });
-
-                bounds.extend(marker.getPosition());
-
-                map.fitBounds(bounds);
-
-                box.innerHTML = `
-<div class="genre">${genreName}</div>
-<div class="spot-name">${spot.name}</div>
-📍 ${spot.vicinity}<br>
-🎯ジャンル：${keyword}<br><br>
-
-🚗約${distance.toFixed(1)}km<br>
-⏱ ${time}分 ${
-time === 30
-? "/ 下道のみ"
-: `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
-}<br><br>
-
-<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}" target="_blank">
-🧭 Googleマップで確認
-</a>
-`;
-
-            } else {
 
                 box.innerHTML = `
 <h3>${genreName}</h3>
-見つかりませんでした…
+見つかりませんでした
 `;
+                return;
             }
+
+            // ---------------------------
+            // 評価フィルター
+            // ---------------------------
+            let filtered = results.filter(r => (r.rating || 0) >= 4.0);
+
+            if (filtered.length === 0) {
+                filtered = results;
+            }
+
+            // ---------------------------
+            // 既存スポット除外
+            // ---------------------------
+            filtered = filtered.filter(place => {
+
+                const plat = place.geometry.location.lat();
+                const plng = place.geometry.location.lng();
+
+                for (let marker of spotMarkers) {
+
+                    if (!marker || !marker.getPosition) continue;
+
+                    const pos = marker.getPosition();
+
+                    const d = calcDistance(
+                        plat,
+                        plng,
+                        pos.lat(),
+                        pos.lng()
+                    );
+
+                    if (d < EXCLUDE_DISTANCE_KM) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                filtered = results;
+            }
+
+            // ---------------------------
+            // レビュー順ソート
+            // ---------------------------
+            filtered.sort((a, b) =>
+                (b.user_ratings_total || 0) -
+                (a.user_ratings_total || 0)
+            );
+
+            // ---------------------------
+            // 上位5件
+            // ---------------------------
+            const top = filtered.slice(0, 5);
+
+            if (top.length === 0) {
+
+                box.innerHTML = `
+<h3>${genreName}</h3>
+見つかりませんでした
+`;
+                return;
+            }
+
+            // ---------------------------
+            // ランダム抽選
+            // ---------------------------
+            const spot = top[Math.floor(Math.random() * top.length)];
+
+            const slat = spot.geometry.location.lat();
+            const slng = spot.geometry.location.lng();
+
+            const rating = spot.rating || "評価なし";
+            const reviews = spot.user_ratings_total || 0;
+
+            // ---------------------------
+            // 犬画像決定
+            // ---------------------------
+            let dogImage = "yellow_dog.png";
+
+            if (genreName.includes("グルメ")) {
+                dogImage = "red_dog.png";
+            }
+
+            if (genreName.includes("自然")) {
+                dogImage = "green_dog.png";
+            }
+
+            // ---------------------------
+            // マーカー
+            // ---------------------------
+            const marker = new google.maps.Marker({
+                position: { lat: slat, lng: slng },
+                map: map,
+                icon: {
+                    url: dogImage,
+                    scaledSize: new google.maps.Size(50, 50)
+                }
+            });
+
+            spotMarkers.push(marker);
+
+            // ---------------------------
+            // マップ範囲
+            // ---------------------------
+            const bounds = new google.maps.LatLngBounds();
+
+            if (startMarker && startMarker.getPosition) {
+                bounds.extend(startMarker.getPosition());
+            }
+
+            spotMarkers.forEach(m => {
+
+                if (m && m.getPosition) {
+                    bounds.extend(m.getPosition());
+                }
+
+            });
+
+            map.fitBounds(bounds);
+
+            // ---------------------------
+            // UI表示
+            // ---------------------------
+            box.innerHTML = `
+<div class="genre">
+<img src="${dogImage}" class="genre-dog">
+${genreName}</div>
+
+<div class="spot-name">${spot.name}</div>
+
+📍 ${spot.vicinity || ""}<br>
+
+⭐ ${rating} (${reviews}件)<br>
+
+🎯ジャンル：${keyword}<br><br>
+
+🚗約${distance.toFixed(1)}km<br>
+
+⏱ ${time}分 ${time === 30
+                    ? "/ 下道のみ"
+                    : `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
+                }<br><br>
+
+<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}" target="_blank">
+🧭 Googleマップでナビ
+</a>
+`;
         }
     );
 }
+
 
 // ===============================
 function showResultWithEffect() {
@@ -409,14 +573,17 @@ function updateHighwayControl() {
     }
 }
 
-document
-.getElementById("timeSelect")
-.addEventListener(
-    "change",
-    updateHighwayControl
-);
+// ページ読み込み後にイベント登録
+window.addEventListener("DOMContentLoaded", function () {
 
-window.addEventListener(
-    "load",
-    updateHighwayControl
-);
+    const timeSelect =
+        document.getElementById("timeSelect");
+
+    timeSelect.addEventListener(
+        "change",
+        updateHighwayControl
+    );
+
+    updateHighwayControl();
+
+});
