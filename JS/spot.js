@@ -25,7 +25,6 @@ function initMap() {
         document.getElementById("map"),
         {
             ...TOKYO_STATION_POSITION,
-            maxZoom: 16
         }
     );
 }
