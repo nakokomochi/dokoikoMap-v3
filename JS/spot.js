@@ -26,6 +26,7 @@ function initMap() {
         TOKYO_STATION_POSITION
     );
 }
+
 // ===============================
 // 検索開始
 // ===============================
@@ -423,11 +424,7 @@ function searchNearbySpotByGenre(
                 }
 
             });
-
-            if (!bounds.isEmpty()) {
-                map.fitBounds(bounds);
-            }
-
+            
             // ---------------------------
             // UI表示
             // ---------------------------
