@@ -588,3 +588,7 @@ window.addEventListener("DOMContentLoaded", function () {
     updateHighwayControl();
 
 });
+
+window.initMap = function () {
+  console.log("initMap動いた！");
+}
