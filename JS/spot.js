@@ -384,14 +384,14 @@ function searchNearbySpotByGenre(
             // ---------------------------
             // 犬画像決定
             // ---------------------------
-            let dogImage = "yellow_dog.png";
+            let dogImage = "image/yellow_dog.png";
 
             if (genreName.includes("グルメ")) {
-                dogImage = "red_dog.png";
+                dogImage = "image/red_dog.png";
             }
 
             if (genreName.includes("自然")) {
-                dogImage = "green_dog.png";
+                dogImage = "image/green_dog.png";
             }
 
             // ---------------------------
@@ -424,7 +424,7 @@ function searchNearbySpotByGenre(
                 }
 
             });
-            
+
             // ---------------------------
             // UI表示
             // ---------------------------
