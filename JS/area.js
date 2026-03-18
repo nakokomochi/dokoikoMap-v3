@@ -226,7 +226,7 @@ function showMap(lat, lng) {
             position: destination,
             map: map,
             icon: {
-                url: "dog.png",
+                url: "image/dog.png",
                 scaledSize:
                     new google.maps.Size(60, 60)
             }
