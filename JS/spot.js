@@ -20,12 +20,12 @@ const EXCLUDE_DISTANCE_KM = 3;
 // ===============================
 // Google Map 初期表示
 // ===============================
-function initMap() {
+window.initMap = function () {
     map = new google.maps.Map(
         document.getElementById("map"),
         TOKYO_STATION_POSITION
     );
-}
+};
 
 // ===============================
 // 検索開始
