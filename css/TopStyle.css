@@ -104,18 +104,6 @@ button:active {
 
 }
 
-.footer {
-
-    text-align: center;
-
-    padding: 20px;
-
-    opacity: 0.6;
-
-    font-size: 12px;
-
-}
-
 .site-icon {
 
   width: 80px;
@@ -218,4 +206,23 @@ button{
 
 .page-nav {
   flex-wrap: wrap;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 40px;
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: #777;
+}
+
+.footer a {
+  color: #555;
+  text-decoration: none;
+  margin: 0 8px;
+}
+
+.footer a:hover {
+  text-decoration: underline;
 }
