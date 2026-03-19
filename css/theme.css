@@ -1,0 +1,105 @@
+/* =========================
+🎨 テーマ変数（デフォルト）
+========================= */
+
+body {
+  --accent-color: #ff6a00;
+  --accent-gradient: linear-gradient(45deg, #ff6a00, #ff8c00);
+  --result-bg: linear-gradient(135deg, #ffeaa7, #fab1a0);
+  --sub-color: #ff6a00;
+}
+
+/* =========================
+🍽 グルメテーマ
+========================= */
+body.gourmet-theme {
+  --accent-color: #ff6b35;
+  --accent-gradient: linear-gradient(45deg, #ff6b35, #ff8c00);
+  --result-bg: linear-gradient(135deg, #ffeaa7, #fab1a0);
+  --sub-color: #ff6b35;
+}
+
+/* =========================
+🏯 観光テーマ
+========================= */
+body.tourism-theme {
+  --accent-color: #0984e3;
+  --accent-gradient: linear-gradient(45deg, #0984e3, #74b9ff);
+  --result-bg: linear-gradient(135deg, #dfe6e9, #b2bec3);
+  --sub-color: #0984e3;
+}
+
+/* =========================
+🌳 自然テーマ
+========================= */
+body.nature-theme {
+  --accent-color: #00b894;
+  --accent-gradient: linear-gradient(45deg, #00b894, #55efc4);
+  --result-bg: linear-gradient(135deg, #dff9fb, #c7ecee);
+  --sub-color: #00b894;
+}
+
+/* =========================
+共通反映（既存CSS上書き）
+========================= */
+
+/* サブタイトル */
+.subTitle {
+  color: var(--sub-color);
+}
+
+/* 入力エリアボタン */
+.panel-top button {
+  background: var(--accent-gradient);
+}
+
+/* フォーカス */
+.panel-top input:focus,
+.panel-top select:focus {
+  border: 2px solid var(--accent-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+/* 結果背景 */
+.results {
+  background: var(--result-bg);
+}
+
+/* ジャンル文字 */
+.genre {
+  color: var(--accent-color);
+}
+
+/* ナビボタン */
+.page-nav button.active {
+  background: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* 再抽選ボタン */
+.reroll-btn {
+  background: var(--accent-gradient);
+}
+
+/* モードボタン */
+.mode-switch button.active {
+  background: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* 紙吹雪テーマ対応 */
+body.gourmet-theme .confetti {
+  background-color: #ff6b35 !important;
+}
+
+body.tourism-theme .confetti {
+  background-color: #0984e3 !important;
+}
+
+body.nature-theme .confetti {
+  background-color: #00b894 !important;
+}
+
+.card:nth-child(1) { border-top: 5px solid #ff6b35; } /* グルメ */
+.card:nth-child(2) { border-top: 5px solid #0984e3; } /* 観光 */
+.card:nth-child(3) { border-top: 5px solid #00b894; } /* 自然 */
