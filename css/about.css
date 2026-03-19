@@ -1,0 +1,80 @@
+/* 全体 */
+body {
+  margin: 0;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background: #f7f7f7;
+  color: #333;
+}
+
+/* コンテナ */
+.about-container {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 20px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+/* タイトル */
+.about-container h1 {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 28px;
+}
+
+/* テキスト */
+.about-container p {
+  line-height: 1.8;
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+/* ボタン */
+.home-button {
+  display: block;
+  width: 200px;
+  margin: 30px auto 0;
+  padding: 12px;
+  text-align: center;
+  background: #ff7f50;
+  color: white;
+  text-decoration: none;
+  border-radius: 999px;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.home-button:hover {
+  background: #ff6333;
+}
+
+/* セクションタイトル */
+.section-title {
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+/* 箇条書き */
+.problem-list {
+  padding-left: 20px;
+  margin-bottom: 20px;
+}
+
+.problem-list li {
+  margin-bottom: 8px;
+}
+
+/* メッセージ */
+.message {
+  margin-top: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* 作者 */
+.author {
+  text-align: right;
+  margin-top: 20px;
+  font-size: 14px;
+}
