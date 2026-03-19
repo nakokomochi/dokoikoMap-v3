@@ -29,4 +29,12 @@
     <loc>https://www.dokoiko-map.com/themes/nature.html</loc>
   </url>
 
+  <url>
+    <loc>https://dokoiko-map-v31.vercel.app/about.html</loc>
+  </url>
+
+  <url>
+    <loc>https://dokoiko-map-v31.vercel.app/contact.html</loc>
+  </url>
+
 </urlset>
