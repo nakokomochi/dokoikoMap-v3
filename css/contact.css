@@ -1,0 +1,82 @@
+/* ===== コンタクト専用（統一版） ===== */
+
+/* ページ背景 */
+body {
+  background: #111;
+  color: white;
+}
+
+/* コンテナ（白カード＋オレンジ枠） */
+.contact-container {
+  max-width: 800px;
+  margin: 60px auto;
+  padding: 25px;
+
+  background: #2d3436;
+  border-radius: 16px;
+
+  border: 3px solid #ff6a00;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+
+  color: white;
+}
+
+/* タイトル */
+.contact-container h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  font-size: 26px;
+  color: white;
+}
+
+/* 説明文 */
+.contact-container p {
+  text-align: center;
+  margin-bottom: 20px;
+  color: white;
+  line-height: 1.6;
+}
+
+/* フォーム（iframe） */
+.contact-container iframe {
+  width: 100%;
+  height: 700px;
+
+  border: none;
+  border-radius: 12px;
+
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+/* 戻るボタン */
+.back-button {
+  display: block;
+  width: 220px;
+  margin: 30px auto 0;
+  padding: 14px;
+  text-align: center;
+
+  background: linear-gradient(45deg, #ff6a00, #ff8c00);
+  color: white;
+
+  text-decoration: none;
+  border-radius: 999px;
+
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.back-button:hover {
+  transform: scale(1.05);
+}
+
+.site-icon {
+  width: 80px;
+  height: auto;
+
+  display: block;      /* ←これ重要 */
+  margin: 0 auto 8px;  /* ←中央寄せ */
+
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}
