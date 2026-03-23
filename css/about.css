@@ -1,26 +1,33 @@
-/* 全体 */
+/* ===== アバウト専用（統一版） ===== */
+
+/* ページ全体を黒 */
 body {
-  margin: 0;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  background: #f7f7f7;
-  color: #333;
+  background: #111;
+  color: white;
 }
 
-/* コンテナ */
+/* メインコンテナ */
 .about-container {
   max-width: 800px;
   margin: 60px auto;
-  padding: 20px;
-  background: #fff;
+  padding: 25px;
+
+  background: #2d3436; 
   border-radius: 16px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+
+  border: 3px solid #ff6a00; /* ←オレンジ枠 */
+
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+
+  color: white;
 }
 
 /* タイトル */
 .about-container h1 {
   text-align: center;
   margin-bottom: 20px;
-  font-size: 28px;
+  font-size: 26px;
+  color: white;
 }
 
 /* テキスト */
@@ -28,31 +35,14 @@ body {
   line-height: 1.8;
   margin-bottom: 16px;
   font-size: 16px;
-}
-
-/* ボタン */
-.home-button {
-  display: block;
-  width: 200px;
-  margin: 30px auto 0;
-  padding: 12px;
-  text-align: center;
-  background: #ff7f50;
-  color: white;
-  text-decoration: none;
-  border-radius: 999px;
-  font-weight: bold;
-  transition: 0.3s;
-}
-
-.home-button:hover {
-  background: #ff6333;
+  color:  white;
 }
 
 /* セクションタイトル */
 .section-title {
   font-weight: bold;
-  margin-top: 20px;
+  margin-top: 25px;
+  color: #ff6a00;
 }
 
 /* 箇条書き */
@@ -63,6 +53,29 @@ body {
 
 .problem-list li {
   margin-bottom: 8px;
+  color:white;
+}
+
+/* ボタン（統一） */
+.home-button {
+  display: block;
+  width: 220px;
+  margin: 30px auto 0;
+  padding: 14px;
+  text-align: center;
+
+  background: linear-gradient(45deg, #ff6a00, #ff8c00);
+  color: white;
+
+  text-decoration: none;
+  border-radius: 999px;
+
+  font-weight: bold;
+  transition: 0.2s;
+}
+
+.home-button:hover {
+  transform: scale(1.05);
 }
 
 /* メッセージ */
@@ -70,6 +83,7 @@ body {
   margin-top: 20px;
   font-weight: bold;
   text-align: center;
+  color: #ff6a00;
 }
 
 /* 作者 */
@@ -77,4 +91,74 @@ body {
   text-align: right;
   margin-top: 20px;
   font-size: 14px;
+  color: #666;
+}
+
+/* =========================
+📌 ナビゲーション（そのままでOK）
+========================= */
+
+.page-nav {
+
+  display: flex;
+  gap: 10px;
+
+  padding: 12px 15px;
+
+  flex-wrap: wrap;
+
+  background: #000;
+
+  border-bottom: 3px solid #ff6a00;
+
+}
+
+.page-nav button {
+
+  flex: 1;
+
+  height: 50px;
+
+  border-radius: 12px;
+
+  border: none;
+
+  background: #1f1f1f;
+
+  color: white;
+
+  font-size: 16px;
+
+  font-weight: bold;
+
+  cursor: pointer;
+
+  transition: 0.15s;
+
+}
+
+.page-nav button:hover {
+  background: #ff6a00;
+}
+
+.page-nav button.active {
+
+  background: #ff6a00;
+
+  box-shadow: 0 4px 12px rgba(255,106,0,0.4);
+
+}
+
+.page-nav button:active {
+  transform: scale(0.96);
+}
+
+.site-icon {
+  width: 80px;
+  height: auto;
+
+  display: block;      /* ←これ重要 */
+  margin: 0 auto 8px;  /* ←中央寄せ */
+
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
 }
