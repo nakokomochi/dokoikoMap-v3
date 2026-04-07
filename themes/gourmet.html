@@ -6,11 +6,46 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>どこいこMap - グルメ</title>
+<title>グルメスポットを探す｜ドライブ・ツーリング向け どこいこMap</title>
+<meta name="description" content="ドライブやツーリングの途中で立ち寄りたくなるグルメスポットを提案。出発地と移動時間から、ご当地グルメや入りやすい飲食スポットを探せる、どこいこMapのグルメ版です。">
+
+<meta name="robots" content="index, follow">
+<meta name="format-detection" content="telephone=no">
+
+<meta property="og:title" content="グルメスポットを探す｜どこいこMap">
+<meta property="og:description" content="ドライブやツーリングの途中に立ち寄りたくなるご当地グルメや飲食スポットを提案します。">
+<meta property="og:image" content="https://www.dokoiko-map.com/image/dog.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.dokoiko-map.com/themes/gourmet.html">
+<meta property="og:site_name" content="どこいこMap">
+<meta property="og:locale" content="ja_JP">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="グルメスポットを探す｜どこいこMap">
+<meta name="twitter:description" content="ドライブやツーリングの途中に立ち寄りたくなるグルメスポットを提案します。">
+<meta name="twitter:image" content="https://www.dokoiko-map.com/image/dog.png">
+
+<link rel="canonical" href="https://www.dokoiko-map.com/themes/gourmet.html">
 
 <link rel="stylesheet" href="../css/ChoiceYourRoad.css">
 <link rel="stylesheet" href="../css/theme.css">
-<link rel="icon" href="../image/dog.png">
+<link rel="icon" href="../image/dog.png" type="image/png">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "グルメスポットを探す｜どこいこMap",
+  "description": "ドライブやツーリングの途中に立ち寄りたくなるご当地グルメや飲食スポットを提案するページです。",
+  "url": "https://www.dokoiko-map.com/themes/gourmet.html",
+  "inLanguage": "ja",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "どこいこMap",
+    "url": "https://www.dokoiko-map.com/"
+  }
+}
+</script>
 
 </head>
 
@@ -51,10 +86,44 @@ TOP
 
 </nav>
 
+<button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
+            aria-controls="mobileMenu">
+            ☰
+        </button>
+
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
+
+            <a href="../index.html">TOP</a>
+            <a href="../spot.html">スポット</a>
+            <a href="../area.html">地名</a>
+
+            <div class="mobile-submenu-wrap">
+                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
+                    aria-controls="themeSubmenu">
+                    テーマ
+                </button>
+
+                <div class="mobile-submenu" id="themeSubmenu">
+                    <a href="../theme.html">テーマ一覧</a>
+                    <a href="gourmet.html">グルメ</a>
+                    <a href="tourism.html">観光</a>
+                    <a href="nature.html">自然</a>
+                    <a href="goodRoad.html">気持ちよく走れる道</a>
+                </div>
+            </div>
+
+            <a href="../about.html">このサイトについて</a>
+            <a href="../contact.html">お問い合わせ</a>
+        </nav>
+
+
 <p class="site-description">
-ドライブ・ツーリング向けのグルメスポットをランダムに3か所提案します。<br>
-出先で次どこいこうにもってこいのグルメ特化版です!<br>
-出発地と移動時間を選択してください。
+今日はどんなごはんに寄り道する？<br>
+ドライブやツーリングの途中に立ち寄りたくなるご当地グルメや、入りやすい飲食スポットから、気分に合う候補を提案します。<br>
+出発地と移動時間を選んで、次のグルメ休憩スポットを見つけてみてください。
 </p>
 
 <section class="panel-top">
@@ -90,7 +159,7 @@ TOP
 <br>
 
 <button onclick="searchGourmet()" class="main-button">
-どこいこうかな！
+  どこいこうかな！
 </button>
 
 <div class="results" id="results">
@@ -100,7 +169,7 @@ TOP
 </div>
 
 <button id="rerollButton" onclick="rerollGourmet()" class="reroll-btn hidden">
-🎲 もう一回まわす
+  🎲 もう一回まわす
 </button>
 
 </section>
@@ -119,9 +188,10 @@ TOP
         </footer>
 
 <script src="../js/gourmet.js"></script>
+<script src="../js/menu.js"></script>
 <script
-src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap" 
-async defer>
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap"
+  async defer>
 </script>
 
 </div>
