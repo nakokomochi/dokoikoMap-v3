@@ -14,6 +14,8 @@ const TOKYO_STATION_POSITION = {
     gestureHandling: "cooperative"
 };
 
+let loadingTimer = null;
+
 // ===============================
 // Google Map 初期表示
 // ===============================
@@ -27,7 +29,7 @@ function initMap() {
 // ===============================
 // ランダム地点開始
 // ===============================
-function searchSpot() {
+function searchArea() {
 
     const startAddress =
         document.getElementById("startLocation").value;
@@ -43,6 +45,9 @@ function searchSpot() {
     const highway =
         document.getElementById("highway").value;
 
+    clearAreaResult();
+    showLoadingState("検索中...", "わんこが目的地を探してるよ");
+
     const geocoder = new google.maps.Geocoder();
 
     geocoder.geocode(
@@ -50,6 +55,7 @@ function searchSpot() {
         function (results, status) {
 
             if (status !== "OK" || !results[0]) {
+                hideLoadingState();
                 alert("出発地を取得できませんでした");
                 return;
             }
@@ -73,6 +79,29 @@ function searchSpot() {
             );
         }
     );
+}
+
+// ===============================
+// 結果クリア
+// ===============================
+function clearAreaResult() {
+
+    const resultsBox =
+        document.getElementById("resultsBox");
+
+    if (resultsBox) {
+        resultsBox.classList.remove("show");
+        resultsBox.classList.remove("loading");
+
+        resultsBox.innerHTML = `
+            <div id="result"></div>
+        `;
+    }
+
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
 }
 
 // ===============================
@@ -119,6 +148,7 @@ function findValidPoint(
 ) {
 
     if (attempt > 15) {
+        hideLoadingState();
         alert("海に当たってしまいました。もう一度回してください。");
         return;
     }
@@ -170,6 +200,8 @@ function findValidPoint(
                             point.lat,
                             point.lng
                         );
+
+                    hideLoadingState();
 
                     document.getElementById("result")
                         .innerHTML =
@@ -491,3 +523,56 @@ function getCurrentLocation() {
     );
 }
 
+// ===============================
+// 検索中わんこ
+// ===============================
+function showLoadingState(message = "検索中...", subMessage = "わんこが目的地を探してるよ") {
+    const resultsBox = document.getElementById("resultsBox");
+    if (!resultsBox) return;
+
+    resultsBox.classList.add("show");
+    resultsBox.classList.add("loading");
+
+    resultsBox.innerHTML = `
+        <div id="loadingBox" class="loading-box">
+            <div class="loading-dog">
+                <img src="image/dog.png" alt="検索中" class="loading-dog-image">
+            </div>
+            <div class="loading-text" id="loadingText">${message}</div>
+            <div class="loading-subtext">${subMessage}</div>
+        </div>
+
+        <div id="result"></div>
+    `;
+
+    const texts = ["検索中...", "検索中 .", "検索中 ..", "検索中 ..."];
+    let i = 0;
+
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+    }
+
+    loadingTimer = setInterval(() => {
+        const el = document.getElementById("loadingText");
+        if (!el) return;
+        el.textContent = texts[i % texts.length];
+        i++;
+    }, 350);
+}
+
+function hideLoadingState() {
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
+
+    const resultsBox = document.getElementById("resultsBox");
+    if (!resultsBox) return;
+
+    resultsBox.classList.remove("loading");
+
+    const loadingBox = document.getElementById("loadingBox");
+    if (loadingBox) {
+        loadingBox.remove();
+    }
+}
