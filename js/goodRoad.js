@@ -159,7 +159,7 @@ function ensureLoadingStyle() {
       text-align: center;
       padding: 24px 16px;
       border-radius: 16px;
-      background: rgba(255,255,255,0.08);
+      background: rgba(228, 249, 251, 0.75);
       margin-top: 16px;
     }
 
@@ -174,11 +174,13 @@ function ensureLoadingStyle() {
       font-weight: bold;
       font-size: 18px;
       margin-bottom: 8px;
+      color: #19a7b8;
     }
 
     .loading-subtext {
       font-size: 13px;
-      opacity: 0.85;
+      opacity: 0.9;
+      color: #226b74;
     }
 
     @keyframes dogBounce {
@@ -883,7 +885,7 @@ function showResultWithEffect() {
 // 紙吹雪
 // ===============================
 function launchConfetti() {
-  const colors = ["#7b1e3a", "#a12c4f", "#d6336c", "#f8d7da", "#e6b8c2"];
+  const colors = ["#19a7b8", "#63d2db", "#8ee3ea", "#e4f9fb", "#d6f4f7"];
 
   for (let i = 0; i < 40; i++) {
     const confetti = document.createElement("div");
