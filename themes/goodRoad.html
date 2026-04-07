@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>気持ちよく走れる道を探す｜ドライブ・ツーリング向け どこいこMap</title>
+<meta name="description" content="景色を楽しむ道、のんびり走れる道、緩やかなカーブ道から、ドライブやツーリングで気持ちよく走れる道を提案。出発地と移動時間から次の行き先を探せる、どこいこMapの気持ちよく走れる道版です。">
+
+<meta name="robots" content="index, follow">
+<meta name="format-detection" content="telephone=no">
+
+<meta property="og:title" content="気持ちよく走れる道を探す｜どこいこMap">
+<meta property="og:description" content="景色を楽しむ道、のんびり走れる道、緩やかなカーブ道から、気分に合うルート候補を提案します。">
+<meta property="og:image" content="https://www.dokoiko-map.com/image/dog.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.dokoiko-map.com/themes/goodRoad.html">
+<meta property="og:site_name" content="どこいこMap">
+<meta property="og:locale" content="ja_JP">
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="気持ちよく走れる道を探す｜どこいこMap">
+<meta name="twitter:description" content="ドライブやツーリングで気持ちよく走れる道を提案します。">
+<meta name="twitter:image" content="https://www.dokoiko-map.com/image/dog.png">
+
+<link rel="canonical" href="https://www.dokoiko-map.com/themes/goodRoad.html">
+
+<link rel="stylesheet" href="../css/ChoiceYourRoad.css">
+<link rel="stylesheet" href="../css/theme.css">
+<link rel="icon" href="../image/dog.png" type="image/png">
+
+</head>
+
+<body class="goodRoad-theme">
+
+<div class="app">
+
+<header class="header">
+
+<a href="../index.html">
+<img src="../image/dog.png" alt="どこいこMapロゴ" class="site-icon">
+</a>
+
+<h1 class="TitleName">
+  どこいこMap
+  <span class="subTitle">気持ちよく走れる道版</span>
+</h1>
+
+</header>
+
+<nav class="page-nav">
+
+<button onclick="location.href='../index.html'">
+TOP
+</button>
+
+<button onclick="location.href='../spot.html'">
+スポット
+</button>
+
+<button onclick="location.href='../area.html'">
+地名
+</button>
+
+<button onclick="location.href='../theme.html'" class="active">
+テーマ
+</button>
+
+</nav>
+
+<button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
+            aria-controls="mobileMenu">
+            ☰
+        </button>
+
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
+
+            <a href="../index.html">TOP</a>
+            <a href="../spot.html">スポット</a>
+            <a href="../area.html">地名</a>
+
+            <div class="mobile-submenu-wrap">
+                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
+                    aria-controls="themeSubmenu">
+                    テーマ
+                </button>
+
+                <div class="mobile-submenu" id="themeSubmenu">
+                    <a href="../theme.html">テーマ一覧</a>
+                    <a href="gourmet.html">グルメ</a>
+                    <a href="tourism.html">観光</a>
+                    <a href="nature.html">自然</a>
+                    <a href="goodRoad.html">気持ちよく走れる道</a>
+                </div>
+            </div>
+
+            <a href="../about.html">このサイトについて</a>
+            <a href="../contact.html">お問い合わせ</a>
+        </nav>
+
+
+<p class="site-description">
+景色がよく、気持ちよく走れそうな道やスポットを提案します。<br>
+緩いカーブ道・景色道・のんびり道をバランスよく探します。<br>
+出発地と移動時間を選択してください。
+</p>
+
+<section class="panel-top">
+
+<label>出発地の住所：</label><br>
+<input id="startLocation" type="text" placeholder="例：東京都渋谷区">
+<br>
+
+<button onclick="getCurrentLocation()" class="location-btn">
+📍 現在地を使用
+</button>
+
+<p class="notice">
+※現在地は保存されません
+</p>
+
+<label>移動時間：</label>
+<select id="timeSelect">
+<option value="30">30分</option>
+<option value="60">1時間</option>
+<option value="90">1時間30分</option>
+<option value="120">2時間</option>
+</select>
+
+<br>
+
+<label>高速道路/有料道路：</label>
+<select id="highway">
+<option value="yes">使う</option>
+<option value="no">使わない</option>
+</select>
+
+<br>
+
+<label>道の雰囲気：</label>
+<select id="roadType">
+  <option value="relaxed">のんびり道</option>
+  <option value="mild_curve">緩いカーブ道</option>
+  <option value="scenic">景色道</option>
+</select>
+
+<br>
+
+<button onclick="searchGoodRoad()" class="main-button">
+  どこいこうかな！
+</button>
+
+<div class="results" id="results">
+<div id="result1" class="result-item"></div>
+<div id="result2" class="result-item"></div>
+<div id="result3" class="result-item"></div>
+</div>
+
+<button id="rerollButton" onclick="rerollGoodRoad()" class="reroll-btn hidden">
+  🎲 もう一回まわす
+</button>
+
+</section>
+
+<section class="panel-map">
+<div id="map"></div>
+</section>
+
+        <footer class="footer">
+
+            <p>
+                © どこいこMap
+            </p>
+            <a href="../about.html">このサイトについて</a> |
+            <a href="../contact.html">お問い合わせ</a>
+        </footer>
+
+<script src="../js/goodRoad.js"></script>
+<script src="../js/menu.js"></script>
+<script
+  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap"
+  async defer>
+</script>
+
+</div>
+
+</body>
+</html>
