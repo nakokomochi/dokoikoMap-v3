@@ -15,7 +15,10 @@ const TOKYO_STATION_POSITION = {
     zoom: 12,
     gestureHandling: "greedy"
 };
+
 const EXCLUDE_DISTANCE_KM = 3;
+let loadingTimer = null;
+let completedSpotResults = 0;
 
 // ===============================
 // Google Map 初期表示
@@ -44,12 +47,14 @@ function searchSpot() {
     const highway = document.getElementById("highway").value;
 
     clearResults();
+    showLoadingState("検索中...", "わんこが目的地を探してるよ");
 
     const geocoder = new google.maps.Geocoder();
 
     geocoder.geocode({ address: startAddress }, function (results, status) {
 
         if (status !== "OK" || !results[0]) {
+            hideLoadingState();
             alert("出発地を取得できませんでした");
             return;
         }
@@ -84,11 +89,26 @@ function searchSpot() {
 // ===============================
 function clearResults() {
 
-    document.getElementById("results").classList.remove("show");
+    const resultsBox = document.getElementById("results");
 
-    document.getElementById("result1").innerHTML = "";
-    document.getElementById("result2").innerHTML = "";
-    document.getElementById("result3").innerHTML = "";
+    if (resultsBox) {
+        resultsBox.classList.remove("show");
+        resultsBox.classList.remove("loading");
+        resultsBox.classList.add("hidden");
+
+        resultsBox.innerHTML = `
+            <div id="result1" class="result-item"></div>
+            <div id="result2" class="result-item"></div>
+            <div id="result3" class="result-item"></div>
+        `;
+    }
+
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
+
+    completedSpotResults = 0;
 
     spotMarkers.forEach(m => m.setMap(null));
     spotMarkers = [];
@@ -149,6 +169,7 @@ function calcDistance(lat1, lng1, lat2, lng2) {
 function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt = 0) {
 
     if (attempt > 15) {
+        hideLoadingState();
         alert("海に当たってしまいました、もう一度回してください");
         return;
     }
@@ -189,6 +210,8 @@ function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway
 // ===============================
 function searchThreeGenres(lat, lng, distance, time, highway) {
 
+    completedSpotResults = 0;
+
     const genreGroups = [
         { name: "🔭観光スポット⛩", keywords: ["神社", "寺", "展望台", "絶景"], color: "red" },
         { name: "🍽グルメ🍜", keywords: ["ラーメン", "カフェ", "食堂"], color: "green" },
@@ -212,8 +235,6 @@ function searchThreeGenres(lat, lng, distance, time, highway) {
         );
     });
 
-    showResultWithEffect();
-
     document.getElementById("rerollButton").classList.remove("hidden");
 }
 
@@ -236,9 +257,6 @@ function searchNearbySpotByGenre(
     const service = new google.maps.places.PlacesService(map);
     const box = document.getElementById(`result${index + 1}`);
 
-    // ---------------------------
-    // 検索パラメータ
-    // ---------------------------
     let type = "tourist_attraction";
     let searchKeyword = keyword;
 
@@ -254,9 +272,6 @@ function searchNearbySpotByGenre(
         searchKeyword = keyword + " 観光名所 絶景 展望台 道の駅 神社 寺";
     }
 
-    // ---------------------------
-    // radius
-    // ---------------------------
     let radius = Math.max(distance * 1000, 5000);
 
     if (retry === 1) radius *= 1.8;
@@ -272,9 +287,6 @@ function searchNearbySpotByGenre(
 
         function (results, status) {
 
-            // ---------------------------
-            // 検索失敗
-            // ---------------------------
             if (
                 status !== google.maps.places.PlacesServiceStatus.OK ||
                 !results ||
@@ -299,25 +311,23 @@ function searchNearbySpotByGenre(
                     return;
                 }
 
-                box.innerHTML = `
+                if (box) {
+                    box.innerHTML = `
 <h3>${genreName}</h3>
 見つかりませんでした
 `;
+                }
+
+                handleSpotResultRendered();
                 return;
             }
 
-            // ---------------------------
-            // 評価フィルター
-            // ---------------------------
             let filtered = results.filter(r => (r.rating || 0) >= 4.0);
 
             if (filtered.length === 0) {
                 filtered = results;
             }
 
-            // ---------------------------
-            // 既存スポット除外
-            // ---------------------------
             filtered = filtered.filter(place => {
 
                 const plat = place.geometry.location.lat();
@@ -348,31 +358,26 @@ function searchNearbySpotByGenre(
                 filtered = results;
             }
 
-            // ---------------------------
-            // レビュー順ソート
-            // ---------------------------
             filtered.sort((a, b) =>
                 (b.user_ratings_total || 0) -
                 (a.user_ratings_total || 0)
             );
 
-            // ---------------------------
-            // 上位5件
-            // ---------------------------
             const top = filtered.slice(0, 5);
 
             if (top.length === 0) {
 
-                box.innerHTML = `
+                if (box) {
+                    box.innerHTML = `
 <h3>${genreName}</h3>
 見つかりませんでした
 `;
+                }
+
+                handleSpotResultRendered();
                 return;
             }
 
-            // ---------------------------
-            // ランダム抽選
-            // ---------------------------
             const spot = top[Math.floor(Math.random() * top.length)];
 
             const slat = spot.geometry.location.lat();
@@ -381,9 +386,6 @@ function searchNearbySpotByGenre(
             const rating = spot.rating || "評価なし";
             const reviews = spot.user_ratings_total || 0;
 
-            // ---------------------------
-            // 犬画像決定
-            // ---------------------------
             let dogImage = "image/yellow_dog.png";
 
             if (genreName.includes("グルメ")) {
@@ -394,9 +396,6 @@ function searchNearbySpotByGenre(
                 dogImage = "image/green_dog.png";
             }
 
-            // ---------------------------
-            // マーカー
-            // ---------------------------
             const marker = new google.maps.Marker({
                 position: { lat: slat, lng: slng },
                 map: map,
@@ -408,9 +407,6 @@ function searchNearbySpotByGenre(
 
             spotMarkers.push(marker);
 
-            // ---------------------------
-            // マップ範囲
-            // ---------------------------
             const bounds = new google.maps.LatLngBounds();
 
             if (startMarker && startMarker.getPosition) {
@@ -425,10 +421,10 @@ function searchNearbySpotByGenre(
 
             });
 
-            // ---------------------------
-            // UI表示
-            // ---------------------------
-            box.innerHTML = `
+            map.fitBounds(bounds);
+
+            if (box) {
+                box.innerHTML = `
 <div class="genre">
 <img src="${dogImage}" class="genre-dog">
 ${genreName}</div>
@@ -452,18 +448,35 @@ ${genreName}</div>
 🧭 Googleマップでナビ
 </a>
 `;
+            }
+
+            handleSpotResultRendered();
         }
     );
 }
 
+// ===============================
+// 描画完了カウント
+// ===============================
+function handleSpotResultRendered() {
+    completedSpotResults++;
+
+    if (completedSpotResults === 1) {
+        hideLoadingState();
+        showResultWithEffect();
+    }
+}
 
 // ===============================
 function showResultWithEffect() {
 
     const box = document.getElementById("results");
 
+    box.classList.remove("hidden");
     box.classList.remove("show");
+
     void box.offsetWidth;
+
     box.classList.add("show");
 
     launchConfetti();
@@ -509,6 +522,7 @@ function rerollSpot() {
     const maxDistance = maxDistanceByTime(time, highway);
 
     clearResults();
+    showLoadingState("検索中...", "わんこが目的地を探してるよ");
 
     findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway);
 }
@@ -588,3 +602,60 @@ window.addEventListener("DOMContentLoaded", function () {
     updateHighwayControl();
 
 });
+
+// ===============================
+// 検索中わんこ
+// ===============================
+function showLoadingState(message = "検索中...", subMessage = "わんこが頑張って目的地を探してるよ") {
+    const resultsBox = document.getElementById("results");
+    if (!resultsBox) return;
+
+    resultsBox.classList.remove("hidden");
+    resultsBox.classList.add("show");
+    resultsBox.classList.add("loading");
+
+    resultsBox.innerHTML = `
+        <div id="loadingBox" class="loading-box">
+            <div class="loading-dog">
+                <img src="image/dog.png" alt="検索中" class="loading-dog-image">
+            </div>
+            <div class="loading-text" id="loadingText">${message}</div>
+            <div class="loading-subtext">${subMessage}</div>
+        </div>
+
+        <div id="result1" class="result-item"></div>
+        <div id="result2" class="result-item"></div>
+        <div id="result3" class="result-item"></div>
+    `;
+
+    const texts = ["検索中...", "検索中 .", "検索中 ..", "検索中 ..."];
+    let i = 0;
+
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+    }
+
+    loadingTimer = setInterval(() => {
+        const el = document.getElementById("loadingText");
+        if (!el) return;
+        el.textContent = texts[i % texts.length];
+        i++;
+    }, 350);
+}
+
+function hideLoadingState() {
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
+
+    const resultsBox = document.getElementById("results");
+    if (!resultsBox) return;
+
+    resultsBox.classList.remove("loading");
+
+    const loadingBox = document.getElementById("loadingBox");
+    if (loadingBox) {
+        loadingBox.remove();
+    }
+}
