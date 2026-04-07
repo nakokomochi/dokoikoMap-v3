@@ -16,6 +16,8 @@ const TOKYO_STATION_POSITION = {
 };
 
 const EXCLUDE_DISTANCE_KM = 3;
+let loadingTimer = null;
+let completedTourismResults = 0;
 
 // ===============================
 // Google Map 初期表示
@@ -44,12 +46,14 @@ function searchTourism() {
     const highway = document.getElementById("highway").value;
 
     clearResults();
+    showLoadingState("検索中...", "わんこが目的地を探してるよ");
 
     const geocoder = new google.maps.Geocoder();
 
     geocoder.geocode({ address: startAddress }, function (results, status) {
 
         if (status !== "OK" || !results[0]) {
+            hideLoadingState();
             alert("出発地を取得できませんでした");
             return;
         }
@@ -83,10 +87,23 @@ function searchTourism() {
 // 結果クリア
 // ===============================
 function clearResults() {
-    document.getElementById("results").classList.remove("show");
-    document.getElementById("result1").innerHTML = "";
-    document.getElementById("result2").innerHTML = "";
-    document.getElementById("result3").innerHTML = "";
+    const resultsBox = document.getElementById("results");
+    if (resultsBox) {
+        resultsBox.classList.remove("show");
+        resultsBox.classList.remove("loading");
+        resultsBox.innerHTML = `
+            <div id="result1" class="result-item"></div>
+            <div id="result2" class="result-item"></div>
+            <div id="result3" class="result-item"></div>
+        `;
+    }
+
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
+
+    completedTourismResults = 0;
 
     spotMarkers.forEach(m => m.setMap(null));
     spotMarkers = [];
@@ -140,6 +157,7 @@ function calcDistance(lat1, lng1, lat2, lng2) {
 // ===============================
 function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt = 0) {
     if (attempt > 15) {
+        hideLoadingState();
         alert("海に当たってしまいました、もう一度回してください");
         return;
     }
@@ -169,10 +187,12 @@ function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway
 // 3つの観光検索
 // ===============================
 function searchThreeTourism(lat, lng, distance, time, highway) {
+    completedTourismResults = 0;
+
     for (let i = 0; i < 3; i++) {
         searchNearbyTourism(lat, lng, distance, time, highway, i);
     }
-    showResultWithEffect();
+
     document.getElementById("rerollButton").classList.remove("hidden");
 }
 
@@ -202,7 +222,11 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
                     searchNearbyTourism(lat, lng, distance, time, highway, index, retry + 1);
                     return;
                 }
-                box.innerHTML = `<h3>🏯 観光</h3>見つかりませんでした`;
+
+                if (box) {
+                    box.innerHTML = `<h3>🏯 観光</h3>見つかりませんでした`;
+                }
+                handleTourismResultRendered();
                 return;
             }
 
@@ -235,7 +259,7 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
                 position: { lat: slat, lng: slng },
                 map: map,
                 icon: {
-                    url: "../image/yellow_dog.png", // ←色だけ変える
+                    url: "../image/yellow_dog.png",
                     scaledSize: new google.maps.Size(50, 50)
                 }
             });
@@ -246,7 +270,8 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
             spotMarkers.forEach(m => { if (m && m.getPosition) bounds.extend(m.getPosition()); });
             map.fitBounds(bounds);
 
-            box.innerHTML = `
+            if (box) {
+                box.innerHTML = `
 <div class="genre">
 <img src="../image/yellow_dog.png" class="genre-dog">
 🏯 観光</div>
@@ -259,8 +284,24 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
 🧭 Googleマップでナビ
 </a>
 `;
+            }
+
+            handleTourismResultRendered();
         }
     );
+}
+
+// ===============================
+// 結果描画完了カウント
+// ===============================
+function handleTourismResultRendered() {
+    completedTourismResults++;
+
+    if (completedTourismResults === 1) {
+        hideLoadingState();
+        document.getElementById("results").classList.add("show");
+        showResultWithEffect();
+    }
 }
 
 // ===============================
@@ -294,12 +335,18 @@ function launchConfetti() {
 // もう一回まわす
 // ===============================
 function rerollTourism() {
-    if (!startLat || !startLng) { alert("先に検索してね！"); return; }
+    if (!startLat || !startLng) { 
+        alert("先に検索してね！"); 
+        return; 
+    }
+
     const time = Number(document.getElementById("timeSelect").value);
     const highway = document.getElementById("highway").value;
     const geocoder = new google.maps.Geocoder();
     const maxDistance = maxDistanceByTime(time, highway);
+
     clearResults();
+    showLoadingState("検索中...", "わんこが目的地を探してるよ");
     findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway);
 }
 
@@ -307,7 +354,10 @@ function rerollTourism() {
 // 現在地取得
 // ===============================
 function getCurrentLocation() {
-    if (!navigator.geolocation) { alert("このブラウザでは位置情報が使えません"); return; }
+    if (!navigator.geolocation) { 
+        alert("このブラウザでは位置情報が使えません"); 
+        return; 
+    }
     navigator.geolocation.getCurrentPosition(function (position) {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
@@ -315,9 +365,13 @@ function getCurrentLocation() {
         geocoder.geocode({ location: { lat: lat, lng: lng } }, function (results, status) {
             if (status === "OK" && results[0]) {
                 document.getElementById("startLocation").value = results[0].formatted_address;
-            } else { alert("住所を取得できませんでした"); }
+            } else { 
+                alert("住所を取得できませんでした"); 
+            }
         });
-    }, function () { alert("現在地を取得できませんでした"); });
+    }, function () { 
+        alert("現在地を取得できませんでした"); 
+    });
 }
 
 // ===============================
@@ -340,3 +394,59 @@ window.addEventListener("DOMContentLoaded", function () {
     timeSelect.addEventListener("change", updateHighwayControl);
     updateHighwayControl();
 });
+
+// ===============================
+// 検索中わんこ
+// ===============================
+function showLoadingState(message = "検索中...", subMessage = "わんこが楽しそうな場所を探してるよ") {
+    const resultsBox = document.getElementById("results");
+    if (!resultsBox) return;
+
+    resultsBox.classList.add("show");
+    resultsBox.classList.add("loading");
+
+    resultsBox.innerHTML = `
+        <div id="loadingBox" class="loading-box">
+            <div class="loading-dog">
+                <img src="../image/dog.png" alt="検索中" class="loading-dog-image">
+            </div>
+            <div class="loading-text" id="loadingText">${message}</div>
+            <div class="loading-subtext">${subMessage}</div>
+        </div>
+
+        <div id="result1" class="result-item"></div>
+        <div id="result2" class="result-item"></div>
+        <div id="result3" class="result-item"></div>
+    `;
+
+    const texts = ["検索中...", "検索中 .", "検索中 ..", "検索中 ..."];
+    let i = 0;
+
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+    }
+
+    loadingTimer = setInterval(() => {
+        const el = document.getElementById("loadingText");
+        if (!el) return;
+        el.textContent = texts[i % texts.length];
+        i++;
+    }, 350);
+}
+
+function hideLoadingState() {
+    if (loadingTimer) {
+        clearInterval(loadingTimer);
+        loadingTimer = null;
+    }
+
+    const resultsBox = document.getElementById("results");
+    if (!resultsBox) return;
+
+    resultsBox.classList.remove("loading");
+
+    const loadingBox = document.getElementById("loadingBox");
+    if (loadingBox) {
+        loadingBox.remove();
+    }
+}
