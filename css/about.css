@@ -4,6 +4,8 @@
 body {
   background: #111;
   color: white;
+  margin: 0;
+  padding: 0;
 }
 
 /* メインコンテナ */
@@ -11,15 +13,12 @@ body {
   max-width: 800px;
   margin: 60px auto;
   padding: 25px;
-
-  background: #2d3436; 
+  background: #2d3436;
   border-radius: 16px;
-
-  border: 3px solid #ff6a00; /* ←オレンジ枠 */
-
+  border: 3px solid #ff6a00;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
-
   color: white;
+  box-sizing: border-box;
 }
 
 /* タイトル */
@@ -28,6 +27,7 @@ body {
   margin-bottom: 20px;
   font-size: 26px;
   color: white;
+  line-height: 1.4;
 }
 
 /* テキスト */
@@ -35,7 +35,7 @@ body {
   line-height: 1.8;
   margin-bottom: 16px;
   font-size: 16px;
-  color:  white;
+  color: white;
 }
 
 /* セクションタイトル */
@@ -53,25 +53,25 @@ body {
 
 .problem-list li {
   margin-bottom: 8px;
-  color:white;
+  color: white;
+  line-height: 1.7;
 }
 
 /* ボタン（統一） */
 .home-button {
   display: block;
   width: 220px;
-  margin: 30px auto 0;
+  max-width: 100%;
+  margin: 18px auto 0;
   padding: 14px;
   text-align: center;
-
   background: linear-gradient(45deg, #ff6a00, #ff8c00);
   color: white;
-
   text-decoration: none;
   border-radius: 999px;
-
   font-weight: bold;
   transition: 0.2s;
+  box-sizing: border-box;
 }
 
 .home-button:hover {
@@ -80,61 +80,47 @@ body {
 
 /* メッセージ */
 .message {
-  margin-top: 20px;
+  margin-top: 24px;
   font-weight: bold;
   text-align: center;
   color: #ff6a00;
+  line-height: 1.8;
 }
 
 /* 作者 */
 .author {
   text-align: right;
-  margin-top: 20px;
+  margin-top: 24px;
   font-size: 14px;
-  color: #666;
+  color: #cfcfcf;
 }
 
 /* =========================
-📌 ナビゲーション（そのままでOK）
+📌 ナビゲーション
 ========================= */
 
 .page-nav {
-
   display: flex;
   gap: 10px;
-
   padding: 12px 15px;
-
   flex-wrap: wrap;
-
   background: #000;
-
   border-bottom: 3px solid #ff6a00;
-
+  box-sizing: border-box;
 }
 
 .page-nav button {
-
   flex: 1;
-
+  min-width: 120px;
   height: 50px;
-
   border-radius: 12px;
-
   border: none;
-
   background: #1f1f1f;
-
   color: white;
-
   font-size: 16px;
-
   font-weight: bold;
-
   cursor: pointer;
-
   transition: 0.15s;
-
 }
 
 .page-nav button:hover {
@@ -142,11 +128,8 @@ body {
 }
 
 .page-nav button.active {
-
   background: #ff6a00;
-
   box-shadow: 0 4px 12px rgba(255,106,0,0.4);
-
 }
 
 .page-nav button:active {
@@ -156,9 +139,230 @@ body {
 .site-icon {
   width: 80px;
   height: auto;
-
-  display: block;      /* ←これ重要 */
-  margin: 0 auto 8px;  /* ←中央寄せ */
-
+  display: block;
+  margin: 0 auto 8px;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}
+
+/* =========================
+🍔ハンバーガーメニュー
+========================= */
+
+.menu-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 5000;
+  width: 48px;
+  height: 48px;
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: rgba(0,0,0,0.92);
+  color: white;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  right: -260px;
+  width: 240px;
+  height: 100vh;
+  background: #111;
+  padding: 88px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: right 0.25s ease;
+  z-index: 5001;
+  box-shadow: -6px 0 20px rgba(0,0,0,0.35);
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.mobile-menu.open {
+  right: 0;
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  z-index: 4990;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.mobile-menu-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-menu a {
+  display: block;
+  background: #1d1d1d;
+  padding: 14px;
+  border-radius: 12px;
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.mobile-menu-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5002;
+  width: 40px;
+  height: 40px;
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: #222;
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-submenu-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mobile-submenu-toggle {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  background: #1d1d1d;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mobile-submenu {
+  display: none;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mobile-submenu.open {
+  display: flex;
+}
+
+.mobile-submenu a {
+  margin-left: 12px;
+}
+
+/* =========================
+📱 スマホ最適化
+========================= */
+
+@media (max-width: 768px) {
+  .menu-toggle {
+    display: flex;
+  }
+
+  .page-nav {
+    display: none !important;
+  }
+
+  .about-container {
+    width: calc(100% - 24px);
+    margin: 24px auto 30px;
+    padding: 18px 16px 22px;
+    border-width: 2px;
+    border-radius: 14px;
+  }
+
+  .about-container h1 {
+    font-size: 22px;
+    margin-bottom: 16px;
+    padding-right: 42px;
+    padding-left: 42px;
+  }
+
+  .about-container p {
+    font-size: 15px;
+    line-height: 1.75;
+    margin-bottom: 14px;
+  }
+
+  .section-title {
+    margin-top: 22px;
+    margin-bottom: 10px;
+    font-size: 16px;
+  }
+
+  .problem-list {
+    padding-left: 18px;
+    margin-bottom: 18px;
+  }
+
+  .problem-list li {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  .site-icon {
+    width: 68px;
+    margin: 0 auto 10px;
+  }
+
+  .message {
+    margin-top: 22px;
+    font-size: 15px;
+  }
+
+  .author {
+    text-align: center;
+    font-size: 13px;
+    margin-top: 20px;
+  }
+
+  .home-button {
+    width: 100%;
+    max-width: 280px;
+    margin-top: 14px;
+    padding: 13px;
+    font-size: 15px;
+  }
+
+  .mobile-menu {
+    width: 250px;
+    right: -270px;
+    padding: 78px 16px 20px;
+    gap: 12px;
+  }
+
+  .mobile-menu a,
+  .mobile-submenu-toggle {
+    padding: 13px 14px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+
+  .mobile-submenu a {
+    margin-left: 8px;
+  }
 }
