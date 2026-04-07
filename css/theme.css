@@ -43,21 +43,21 @@ body.nature-theme {
 🏍 気持ちよく走れる道テーマ
 ========================= */
 body.goodRoad-theme {
-  --accent-color: #7b1e3a;
-  --accent-gradient: linear-gradient(45deg, #7b1e3a, #a12c4f);
-  --result-bg: linear-gradient(135deg, #f8d7da, #e6b8c2);
-  --sub-color: #7b1e3a;
+  --accent-color: #19a7b8;
+  --accent-gradient: linear-gradient(45deg, #19a7b8, #63d2db);
+  --result-bg: linear-gradient(135deg, #e4f9fb, #d6f4f7);
+  --sub-color: #19a7b8;
 }
 
 body.goodRoad-theme .confetti {
-  background-color: #7b1e3a !important;
+  background-color: #19a7b8 !important;
 }
 
 .fallback-note {
   margin: 8px 0 10px;
   font-size: 13px;
-  color: #5a2a35;
-  background: rgba(255,255,255,0.45);
+  color: #226b74;
+  background: rgba(255,255,255,0.6);
   padding: 6px 10px;
   border-radius: 10px;
 }
