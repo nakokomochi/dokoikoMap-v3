@@ -2,152 +2,160 @@
 <html lang="ja">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ツーリング・ドライブの行き先をランダム提案｜どこいこMap スポット版</title>
+    <meta name="description" content="出発地と移動時間から、ツーリングやドライブにぴったりなスポットをランダムで3件提案。次の目的地探しに使えるどこいこMapのスポット版です。">
 
-<title>どこいこMap - スポット</title>
+    <meta name="robots" content="index, follow">
+    <meta name="format-detection" content="telephone=no">
 
-<link rel="stylesheet" href="css/ChoiceYourRoad.css">
-<link rel="icon" href="image/dog.png">
+    <meta property="og:title" content="ツーリング・ドライブのスポットをランダム提案｜どこいこMap スポット版">
+    <meta property="og:description" content="出発地と移動時間から、ツーリングやドライブにぴったりなおでかけスポットをランダムで3件提案します。">
+    <meta property="og:image" content="https://www.dokoiko-map.com/image/dog.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.dokoiko-map.com/spot.html">
+    <meta property="og:site_name" content="どこいこMap">
+    <meta property="og:locale" content="ja_JP">
 
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="ツーリング・ドライブのスポットをランダム提案｜どこいこMap スポット版">
+    <meta name="twitter:description" content="出発地と移動時間から、おでかけスポットをランダムで3件提案します。">
+    <meta name="twitter:image" content="https://www.dokoiko-map.com/image/dog.png">
+
+    <link rel="canonical" href="https://www.dokoiko-map.com/spot.html">
+    <link rel="stylesheet" href="css/ChoiceYourRoad.css">
+    <link rel="icon" href="image/dog.png" type="image/png">
 </head>
 
-
 <body>
+    <div class="app">
 
-<div class="app">
+        <header class="header">
+            <a href="index.html">
+                <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
+            </a>
 
-<header class="header">
+            <h1 class="TitleName">
+                どこいこMap
+                <span class="subTitle">スポット版</span>
+            </h1>
+        </header>
 
-<a href="index.html">
-<img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
-</a>
+        <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
+            aria-controls="mobileMenu">
+            ☰
+        </button>
 
-<h1 class="TitleName">
-  どこいこMap
-  <span class="subTitle">スポット版</span>
-</h1>
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
 
-</header>
+        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
 
+            <a href="index.html">TOP</a>
+            <a href="spot.html">スポット</a>
+            <a href="area.html">地名</a>
 
-<nav class="page-nav">
+            <div class="mobile-submenu-wrap">
+                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
+                    aria-controls="themeSubmenu">
+                    テーマ
+                </button>
 
-<button onclick="location.href='index.html'">
-TOP
-</button>
+                <div class="mobile-submenu" id="themeSubmenu">
+                    <a href="theme.html">テーマ一覧</a>
+                    <a href="themes/gourmet.html">グルメ</a>
+                    <a href="themes/tourism.html">観光</a>
+                    <a href="themes/nature.html">自然</a>
+                    <a href="themes/goodRoad.html">気持ちよく走れる道</a>
+                </div>
+            </div>
 
-<button class="active">
-スポット
-</button>
+            <a href="about.html">このサイトについて</a>
+            <a href="contact.html">お問い合わせ</a>
+        </nav>
 
-<button onclick="location.href='area.html'">
-地名
-</button>
+        <nav class="page-nav">
+            <button onclick="location.href='index.html'">TOP</button>
+            <button onclick="location.href='spot.html'">スポット</button>
+            <button class="active">地名</button>
+            <button onclick="location.href='theme.html'">テーマ</button>
+        </nav>
 
-<button onclick="location.href='theme.html'">
-テーマ
-</button>
+        <p class="site-description">
+            行き先に迷ったら、ワンクリック。<br><br>
 
-</nav>
+            ツーリング・ドライブにぴったりな<br>
+            スポットをランダムで3件提案します。
+        </p>
 
+        <section class="panel-top">
 
-<p class="site-description">
+            <label for="startLocation">出発地の住所：</label><br>
+            <input id="startLocation" type="text" placeholder="例：東京都渋谷区">
+            <br>
 
-ドライブ・ツーリングスポットをランダムに提案します。<br>
-出発地と移動時間を選択してください。
+            <button onclick="getCurrentLocation()" class="location-btn">
+                📍 現在地を使用
+            </button>
 
-</p>
+            <p class="notice">
+                ※現在地は保存されません
+            </p>
 
+            <label for="timeSelect">移動時間：</label>
+            <select id="timeSelect">
+                <option value="30">30分</option>
+                <option value="60">1時間</option>
+                <option value="90">1時間30分</option>
+                <option value="120">2時間</option>
+            </select>
 
-<section class="panel-top">
+            <br>
 
-<label>出発地の住所：</label><br>
+            <label for="highway">高速道路/有料道路：</label>
+            <select id="highway">
+                <option value="yes">使う</option>
+                <option value="no">使わない</option>
+            </select>
 
-<input id="startLocation" type="text" placeholder="例：東京都渋谷区">
+            <br>
 
-<br>
+            <button onclick="searchSpot()" class="main-button">
+                どこいこうかな！
+            </button>
 
+            <div class="results hidden" id="results">
+                <div id="result1" class="result-item"></div>
+                <div id="result2" class="result-item"></div>
+                <div id="result3" class="result-item"></div>
+            </div>
 
-<button onclick="getCurrentLocation()" class="location-btn">
-📍 現在地を使用
-</button>
+            <button id="rerollButton" onclick="rerollSpot()" class="reroll-btn hidden">
+                🎲 もう一回まわす
+            </button>
 
-<p class="notice">
-※現在地は保存されません
-</p>
+        </section>
 
-
-<label>移動時間：</label>
-
-<select id="timeSelect">
-<option value="30">30分</option>
-<option value="60">1時間</option>
-<option value="90">1時間30分</option>
-<option value="120">2時間</option>
-</select>
-
-<br>
-
-
-<label>高速道路/有料道路：</label>
-
-<select id="highway">
-
-<option value="yes">使う</option>
-<option value="no">使わない</option>
-
-</select>
-
-<br>
-
-
-<button onclick="searchSpot()" class="main-button">
-どこいこうかな！
-</button>
-
-
-<div class="results" id="results">
-
-<div id="result1" class="result-item"></div>
-<div id="result2" class="result-item"></div>
-<div id="result3" class="result-item"></div>
-
-</div>
-
-
-<button id="rerollButton" onclick="rerollSpot()" class="reroll-btn hidden">
-🎲 もう一回まわす
-</button>
-
-</section>
-
-
-<section class="panel-map">
-
-<div id="map"></div>
-
-</section>
+        <section class="panel-map">
+            <div id="map"></div>
+        </section>
 
         <footer class="footer">
-
-            <p>
-                © どこいこMap
-            </p>
+            <p>© どこいこMap</p>
             <a href="about.html">このサイトについて</a> |
             <a href="contact.html">お問い合わせ</a>
         </footer>
 
+        <script src="js/spot.js"></script>
+        <script src="js/menu.js"></script>
+        <script
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap"
+            async defer>
+            </script>
 
-<script src="js/spot.js"></script>
-
-<script
-src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap"
-async defer>
-</script>
-
-</div>
-
+    </div>
 </body>
+
 </html>
