@@ -2,136 +2,146 @@
 <html lang="ja">
 
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index, follow">
+    <meta name="format-detection" content="telephone=no">
 
-    <title>ツーリングの行き先に迷ったら｜目的地をランダム提案 どこいこMap</title>
-    <meta name="description" content="ツーリングの行き先に迷ったら、どこいこMap。景色・ワインディング・グルメなどからランダムで目的地を提案します。">
+    <title>ツーリング・ドライブの行き先に迷ったら｜目的地をランダム提案 どこいこMap</title>
+    <meta name="description" content="ツーリングやドライブの行き先に迷ったら、どこいこMap。スポット・地名・テーマから目的地をランダム提案するおでかけ支援サイトです。">
+
     <meta property="og:title" content="ツーリングの行き先に迷ったら｜どこいこMap">
-    <meta property="og:description" content="バイク乗り向け！目的地をランダムで提案するツーリング支援ツール">
-    <meta property="og:image" content="https://dokoiko-map.com/dog.png">
+    <meta property="og:description" content="バイク乗り・ドライブ好き向け。行き先をランダムで提案するツーリング支援ツールです。">
+    <meta property="og:image" content="https://www.dokoiko-map.com/image/dog.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.dokoiko-map.com/">
+
+    <link rel="canonical" href="https://www.dokoiko-map.com/">
 
     <link rel="stylesheet" href="css/TopStyle.css">
     <link rel="icon" href="image/dog.png">
-
 </head>
 
-
 <body>
-
     <div class="app">
 
         <header class="header">
-
             <a href="index.html">
                 <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
             </a>
 
             <h1>どこいこMap</h1>
 
-            <!-- ⭐追加：キャッチコピー -->
             <p class="catch">
                 次の目的地、5秒で決まる。
             </p>
 
-            <!-- ⭐変更：説明 -->
             <p class="subtitle">
-                ツーリングの行き先に迷ったら。<br>
-                ワンクリックで走りたくなる目的地をランダム提案。
+                ツーリングやドライブの<br>行き先に迷ったら。<br>
+                ワンクリックで走りたくなる、目的地候補をランダム提案します。
             </p>
-
         </header>
+
+        <!-- スマホ用メニューボタン -->
+        <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
+            aria-controls="mobileMenu">
+            ☰
+        </button>
+
+        <!-- スマホ用メニュー背景 -->
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+        <!-- スマホ用メニュー -->
+        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
+            <a href="index.html">TOP</a>
+            <a href="spot.html">スポット</a>
+            <a href="area.html">地名</a>
+            <div class="mobile-submenu-wrap">
+                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
+                    aria-controls="themeSubmenu">
+                    テーマ
+                </button>
+
+                <div class="mobile-submenu" id="themeSubmenu">
+                    <a href="theme.html">テーマ一覧</a>
+                    <a href="themes/gourmet.html">グルメ</a>
+                    <a href="themes/tourism.html">観光</a>
+                    <a href="themes/nature.html">自然</a>
+                    <a href="themes/goodRoad.html">気持ちよく走れる道</a>
+                </div>
+            </div>
+
+            <a href="about.html">このサイトについて</a>
+            <a href="contact.html">お問い合わせ</a>
+        </nav>
 
         <main class="menu">
 
             <div class="card">
-
                 <h2>ランダムスポット</h2>
-
                 <p>
-                    ツーリングにぴったりなスポットをランダムに3か所提案します。<br>
-                    次の目的地の候補を見つけてみてください。
+                    ツーリングやドライブにぴったりなスポットをランダムに3か所提案します。<br>
+                    次の目的地候補をすぐに見つけたい方におすすめです。
                 </p>
-
                 <button onclick="location.href='spot.html'">
                     スポットを探す
                 </button>
-
             </div>
 
-
             <div class="card">
-
                 <h2>ランダム地名</h2>
-
                 <p>
                     ツーリング・ドライブ先を地名で提案します。<br>
-                    GoogleMapを見ながら目的地を決めたい方はこちら。
+                    Googleマップを見ながら目的地を決めたい方はこちら。
                 </p>
-
                 <button onclick="location.href='area.html'">
                     地名を探す
                 </button>
-
             </div>
 
-
             <div class="card">
-
                 <h2>テーマで探す</h2>
-
                 <p>
-                    景色・ワインディング・グルメなど<br>
-                    テーマから目的地を探します。
+                    グルメ・観光・自然・気持ちよく走れる道など、<br>
+                    気分に合わせてテーマから目的地を探せます。
                 </p>
-
                 <button onclick="location.href='theme.html'">
                     テーマを選ぶ
                 </button>
-
             </div>
 
             <div class="card">
-
                 <h2>どこいこMapについて</h2>
-
                 <p>
-                    サイト制作者のコメントです！
+                    どこいこMapの使い方や、サイトを作った理由を紹介しています。
                 </p>
-
                 <button onclick="location.href='about.html'">
                     コメントを読む
                 </button>
-            </div>    
+            </div>
 
             <div class="card">
-
                 <h2>お問い合わせ</h2>
-
                 <p>
-                    サイト制作者へのお問い合わせはこちら
+                    サイト制作者へのお問い合わせはこちらからどうぞ。
                 </p>
-
                 <button onclick="location.href='contact.html'">
                     お問い合わせ
                 </button>
-            </div>    
+            </div>
 
         </main>
 
-
         <footer class="footer">
-
-            <p>
-                © どこいこMap
-            </p>
+            <p>© どこいこMap</p>
             <a href="about.html">このサイトについて</a> |
             <a href="contact.html">お問い合わせ</a>
         </footer>
 
     </div>
 
+    <script src="js/menu.js"></script>
 </body>
 
 </html>
