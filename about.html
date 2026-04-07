@@ -3,18 +3,58 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>どこいこMapについて</title>
-
     <link rel="stylesheet" href="css/about.css">
-
 </head>
 
 <body>
+
+    <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
+        aria-controls="mobileMenu">
+        ☰
+    </button>
+
+    <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+    <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
+        <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
+
+        <a href="index.html">TOP</a>
+        <a href="spot.html">スポット</a>
+        <a href="area.html">地名</a>
+
+        <div class="mobile-submenu-wrap">
+            <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
+                aria-controls="themeSubmenu">
+                テーマ
+            </button>
+
+            <div class="mobile-submenu" id="themeSubmenu">
+                <a href="theme.html">テーマ一覧</a>
+                <a href="themes/gourmet.html">グルメ</a>
+                <a href="themes/tourism.html">観光</a>
+                <a href="themes/nature.html">自然</a>
+                <a href="themes/goodRoad.html">気持ちよく走れる道</a>
+            </div>
+        </div>
+
+        <a href="about.html">このサイトについて</a>
+        <a href="contact.html">お問い合わせ</a>
+    </nav>
+
+    <nav class="page-nav">
+        <button onclick="location.href='index.html'">TOP</button>
+        <button onclick="location.href='spot.html'">スポット</button>
+        <button onclick="location.href='area.html'">地名</button>
+        <button onclick="location.href='theme.html'">テーマ</button>
+    </nav>
 
     <div class="about-container">
         <a href="index.html">
             <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
         </a>
+
         <h1>どこいこMapについて</h1>
 
         <p>
@@ -51,9 +91,9 @@
 
         <a href="index.html" class="home-button">トップへ戻る</a>
         <a href="contact.html" class="home-button">お問い合わせ</a>
-
     </div>
 
+    <script src="js/menu.js"></script>
 </body>
 
 </html>
