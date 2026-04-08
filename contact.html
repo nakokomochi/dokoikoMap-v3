@@ -1,69 +1,79 @@
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-N2707VJLF6"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
 
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+        gtag('config', 'G-N2707VJLF6');
+    </script>
 
-<title>どこいこMap - お問い合わせ</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<link rel="stylesheet" href="css/contact.css">
+    <title>どこいこMap - お問い合わせ</title>
+
+    <link rel="stylesheet" href="css/contact.css">
 
 </head>
 
 <div class="contact-container">
-   <a href="index.html">
-            <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
-        </a>
-  <h2>お問い合わせ</h2>
+    <a href="index.html">
+        <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
+    </a>
+    <h2>お問い合わせ</h2>
 
-  <p>
-    匿名OKです！気軽に教えてください🙏<br>
-    いただいた意見はサービス改善に活かします！
-  </p>
+    <p>
+        匿名OKです！気軽に教えてください🙏<br>
+        いただいた意見はサービス改善に活かします！
+    </p>
 
-  <iframe src="https://docs.google.com/forms/d/e/1FAIpQLSeugwLic_ZPK1-KgdkblAFEsmCIRiSRqMmdWkxNmxqg5Ln9_A/viewform?embedded=true" width="640" height="1141" frameborder="0" marginheight="0" marginwidth="0">読み込んでいます…</iframe>
+    <iframe
+        src="https://docs.google.com/forms/d/e/1FAIpQLSeugwLic_ZPK1-KgdkblAFEsmCIRiSRqMmdWkxNmxqg5Ln9_A/viewform?embedded=true"
+        width="640" height="1141" frameborder="0" marginheight="0" marginwidth="0">読み込んでいます…</iframe>
 
-  <a href="index.html" class="back-button">トップに戻る</a>
+    <a href="index.html" class="back-button">トップに戻る</a>
 </div>
 
-<button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
-            aria-controls="mobileMenu">
-            ☰
+<button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false" aria-controls="mobileMenu">
+    ☰
+</button>
+
+<div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+<nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
+    <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
+
+    <a href="index.html">TOP</a>
+    <a href="spot.html">スポット</a>
+    <a href="area.html">地名</a>
+
+    <div class="mobile-submenu-wrap">
+        <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
+            aria-controls="themeSubmenu">
+            テーマ
         </button>
 
-        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
-
-        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
-            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
-
-            <a href="index.html">TOP</a>
-            <a href="spot.html">スポット</a>
-            <a href="area.html">地名</a>
-
-            <div class="mobile-submenu-wrap">
-                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
-                    aria-controls="themeSubmenu">
-                    テーマ
-                </button>
-
-                <div class="mobile-submenu" id="themeSubmenu">
-                <a href="theme.html">テーマ一覧</a>
-                <a href="themes/gourmet.html">グルメ</a>
-                <a href="themes/tourism.html">観光</a>
-                <a href="themes/nature.html">自然</a>
-                <a href="themes/goodRoad.html">気持ちよく走れる道</a>
-            </div>
+        <div class="mobile-submenu" id="themeSubmenu">
+            <a href="theme.html">テーマ一覧</a>
+            <a href="themes/gourmet.html">グルメ</a>
+            <a href="themes/tourism.html">観光</a>
+            <a href="themes/nature.html">自然</a>
+            <a href="themes/goodRoad.html">気持ちよく走れる道</a>
         </div>
-            </div>
+    </div>
+    </div>
 
-            <a href="about.html">このサイトについて</a>
-            <a href="contact.html">お問い合わせ</a>
-        </nav>
+    <a href="about.html">このサイトについて</a>
+    <a href="contact.html">お問い合わせ</a>
+</nav>
 
-        <nav class="page-nav">
-            <button onclick="location.href='index.html'">TOP</button>
-            <button onclick="location.href='spot.html'">スポット</button>
-            <button onclick="location.href='area.html'">地名</button>
-            <button onclick="location.href='theme.html'">テーマ</button>
-        </nav>
+<nav class="page-nav">
+    <button onclick="location.href='index.html'">TOP</button>
+    <button onclick="location.href='spot.html'">スポット</button>
+    <button onclick="location.href='area.html'">地名</button>
+    <button onclick="location.href='theme.html'">テーマ</button>
+</nav>
 
-        <script src="js/menu.js"></script>
+<script src="js/menu.js"></script>
