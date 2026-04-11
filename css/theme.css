@@ -139,7 +139,7 @@ body.nature-theme .confetti {
   text-align: center;
   padding: 24px 16px;
   border-radius: 16px;
-  background: rgba(255,255,255,0.08);
+  background: #fff;
   margin-top: 16px;
 }
 
@@ -215,8 +215,8 @@ body.nature-theme .confetti {
   padding: 0;
   border: none;
   border-radius: 12px;
-  background: rgba(0,0,0,0.92);
-  color: white;
+  background: #ff6b35;
+  color: #222;
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
@@ -354,4 +354,62 @@ body.nature-theme .confetti {
 /* 子メニューを少しだけ階層っぽく見せたいなら */
 .mobile-submenu a {
   margin-left: 12px;
+}
+
+/* =========================
+🤍 白ベース調整
+========================= */
+
+body.gourmet-theme {
+  background: linear-gradient(180deg, #fffdfb 0%, #fff4ec 100%);
+}
+
+body.tourism-theme {
+  background: linear-gradient(180deg, #fbfdff 0%, #eef7ff 100%);
+}
+
+body.nature-theme {
+  background: linear-gradient(180deg, #fbfffd 0%, #eefcf7 100%);
+}
+
+body.goodRoad-theme {
+  background: linear-gradient(180deg, #fbfeff 0%, #eefbfd 100%);
+}
+
+.results {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.loading-box {
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+
+.mobile-menu {
+  background: #fff;
+  box-shadow: -6px 0 20px rgba(0,0,0,0.12);
+  border-left: 1px solid rgba(0,0,0,0.06);
+}
+
+.mobile-menu-overlay {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(2px);
+}
+
+.mobile-menu a {
+  background: #fff;
+  color: #222;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.mobile-menu-close {
+  background: #fff;
+  color: #222;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.mobile-submenu-toggle {
+  background: #fff;
+  color: #222;
+  border: 1px solid rgba(0,0,0,0.06);
 }
