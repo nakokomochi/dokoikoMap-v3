@@ -1,25 +1,23 @@
-/* ===== コンタクト専用（統一版） ===== */
+/* ===== コンタクト専用（白系統一版） ===== */
 
 /* ページ背景 */
 body {
-  background: #111;
-  color: white;
+  background: linear-gradient(180deg, #ffffff 0%, #fff8f2 100%);
+  color: #222;
 }
 
-/* コンテナ（白カード＋オレンジ枠） */
+/* コンテナ */
 .contact-container {
   max-width: 800px;
   margin: 60px auto;
   padding: 25px;
-
-  background: #2d3436;
+  background: rgba(255, 255, 255, 0.96);
   border-radius: 16px;
-
-  border: 3px solid #ff6a00;
-
-  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-
-  color: white;
+  border: 2px solid rgba(255, 106, 0, 0.22);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.06),
+    0 10px 26px rgba(255,106,0,0.10);
+  color: #222;
 }
 
 /* タイトル */
@@ -27,26 +25,25 @@ body {
   text-align: center;
   margin-bottom: 10px;
   font-size: 26px;
-  color: white;
+  color: #222;
 }
 
 /* 説明文 */
 .contact-container p {
   text-align: center;
   margin-bottom: 20px;
-  color: white;
+  color: #444;
   line-height: 1.6;
 }
 
-/* フォーム（iframe） */
+/* フォーム */
 .contact-container iframe {
   width: 100%;
   height: 700px;
-
   border: none;
   border-radius: 12px;
-
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+  background: white;
 }
 
 /* 戻るボタン */
@@ -56,15 +53,13 @@ body {
   margin: 30px auto 0;
   padding: 14px;
   text-align: center;
-
   background: linear-gradient(45deg, #ff6a00, #ff8c00);
   color: white;
-
   text-decoration: none;
   border-radius: 999px;
-
   font-weight: bold;
   transition: 0.2s;
+  box-shadow: 0 8px 18px rgba(255,106,0,0.18);
 }
 
 .back-button:hover {
@@ -74,11 +69,9 @@ body {
 .site-icon {
   width: 80px;
   height: auto;
-
-  display: block;      /* ←これ重要 */
-  margin: 0 auto 8px;  /* ←中央寄せ */
-
-  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+  display: block;
+  margin: 0 auto 8px;
+  filter: drop-shadow(0 4px 8px rgba(255,106,0,0.16));
 }
 
 /* =========================
@@ -96,12 +89,12 @@ body {
   padding: 0;
   border: none;
   border-radius: 12px;
-  background: rgba(0,0,0,0.92);
+  background: #ff6a00;
   color: white;
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  box-shadow: 0 4px 12px rgba(255,106,0,0.22);
   display: none;
   align-items: center;
   justify-content: center;
@@ -113,15 +106,16 @@ body {
   right: -260px;
   width: 240px;
   height: 100vh;
-  background: #111;
+  background: #fffaf6;
   padding: 88px 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   transition: right 0.25s ease;
   z-index: 5001;
-  box-shadow: -6px 0 20px rgba(0,0,0,0.35);
+  box-shadow: -6px 0 20px rgba(0,0,0,0.12);
   overflow-y: auto;
+  border-left: 1px solid rgba(255,106,0,0.14);
 }
 
 .mobile-menu.open {
@@ -131,7 +125,8 @@ body {
 .mobile-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(255, 248, 242, 0.82);
+  backdrop-filter: blur(2px);
   z-index: 4990;
   opacity: 0;
   pointer-events: none;
@@ -145,12 +140,13 @@ body {
 
 .mobile-menu a {
   display: block;
-  background: #1d1d1d;
+  background: white;
   padding: 14px;
   border-radius: 12px;
-  color: white;
+  color: #222;
   text-decoration: none;
   font-weight: bold;
+  border: 1px solid rgba(255,106,0,0.14);
 }
 
 .mobile-menu-close {
@@ -164,14 +160,15 @@ body {
   padding: 0;
   border: none;
   border-radius: 10px;
-  background: #222;
-  color: #fff;
+  background: white;
+  color: #222;
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }
 
 @media (max-width: 768px) {
@@ -184,11 +181,9 @@ body {
   }
 }
 
-  .header {
-    padding-right: 70px;
-  }
-
-
+.header {
+  padding-right: 70px;
+}
 
 @media (max-width: 768px) {
   .menu-toggle {
@@ -210,11 +205,11 @@ body {
   display: block;
   width: 100%;
   box-sizing: border-box;
-  background: #1d1d1d;
+  background: white;
   padding: 14px;
   border-radius: 12px;
-  border: none;
-  color: white;
+  border: 1px solid rgba(255,106,0,0.14);
+  color: #222;
   text-decoration: none;
   font-weight: bold;
   font-size: 16px;
@@ -232,7 +227,6 @@ body {
   display: flex;
 }
 
-/* 子メニューを少しだけ階層っぽく見せたいなら */
 .mobile-submenu a {
   margin-left: 12px;
 }
