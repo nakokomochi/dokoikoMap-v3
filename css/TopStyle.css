@@ -3,13 +3,10 @@
 }
 
 body {
-
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
-
-    background: #111;
-    color: white;
-
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  background: linear-gradient(180deg, #ffffff 0%, #fff8f2 100%);
+  color: #222;
 }
 
 .app {
@@ -28,6 +25,8 @@ body {
 
     max-width: 500px;
     margin: 0 auto;
+    background: rgba(255, 255, 255, 0.78);
+    border-radius: 20px;
 
 }
 
@@ -58,27 +57,22 @@ body {
 }
 
 .card {
-
-    background: #1e1e1e;
-
-    border-radius: 16px;
-
-    padding: 22px;
-
-    margin-bottom: 22px;
-
-    border: 1px solid #2a2a2a;
-
-    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-
-    transition: 0.2s;
-
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px;
+  margin-bottom: 22px;
+  border: 1px solid rgba(255, 140, 0, 0.28);
+  box-shadow:
+    0 6px 16px rgba(0, 0, 0, 0.06),
+    0 10px 24px rgba(255, 140, 0, 0.12);
+  transition: 0.2s;
 }
 
 .card:hover {
-
-    transform: translateY(-4px);
-
+  transform: translateY(-4px);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.08),
+    0 14px 28px rgba(255, 140, 0, 0.16);
 }
 
 .card h2 {
@@ -203,7 +197,7 @@ button{
   padding: 0;
   border: none;
   border-radius: 12px;
-  background: rgba(17, 17, 17, 0.92);
+  background: #ff6a00;
   color: #fff;
   font-size: 24px;
   line-height: 1;
@@ -217,7 +211,8 @@ button{
 .mobile-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(255, 248, 242, 0.82);
+  backdrop-filter: blur(2px);
   z-index: 1190;
   opacity: 0;
   pointer-events: none;
@@ -236,13 +231,14 @@ button{
   width: 260px;
   max-width: 80vw;
   height: 100vh;
-  background: #111;
+  background: #fffaf5;
   z-index: 1210;
   padding: 88px 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: -6px 0 20px rgba(0,0,0,0.3);
+  box-shadow: -6px 0 20px rgba(0,0,0,0.14);
+  border-left: 1px solid rgba(255, 140, 0, 0.18);
   transition: right 0.25s ease;
 }
 
@@ -261,8 +257,9 @@ button{
   padding: 0;
   border: none;
   border-radius: 10px;
-  background: #222;
+  background: #ff8c00;
   color: #fff;
+  border: 1px solid #ff8c00;
   font-size: 28px;
   line-height: 1;
   cursor: pointer;
@@ -275,8 +272,9 @@ button{
   display: block;
   padding: 14px 12px;
   border-radius: 12px;
-  background: #1d1d1d;
-  color: #fff;
+  background: #fff;
+  color: #222;
+  border: 1px solid #ff8c00;
   text-decoration: none;
   font-weight: bold;
 }
@@ -338,11 +336,11 @@ button{
   display: block;
   width: 100%;
   box-sizing: border-box;
-  background: #1d1d1d;
+  background: #ffffff;
   padding: 14px;
   border-radius: 12px;
-  border: none;
-  color: white;
+  color: #222;
+  border: 1px solid #ff8c00;
   text-decoration: none;
   font-weight: bold;
   font-size: 16px;
