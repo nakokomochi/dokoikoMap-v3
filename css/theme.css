@@ -57,7 +57,7 @@ body.goodRoad-theme .confetti {
   margin: 8px 0 10px;
   font-size: 13px;
   color: #226b74;
-  background: rgba(255,255,255,0.6);
+  background: rgba(255, 255, 255, 0.6);
   padding: 6px 10px;
   border-radius: 10px;
 }
@@ -100,7 +100,7 @@ body.goodRoad-theme .confetti {
 /* ナビボタン */
 .page-nav button.active {
   background: var(--accent-color);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* 再抽選ボタン */
@@ -111,7 +111,7 @@ body.goodRoad-theme .confetti {
 /* モードボタン */
 .mode-switch button.active {
   background: var(--accent-color);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* 紙吹雪テーマ対応 */
@@ -127,9 +127,21 @@ body.nature-theme .confetti {
   background-color: #00b894 !important;
 }
 
-.card:nth-child(1) { border-top: 5px solid #ff6b35; } /* グルメ */
-.card:nth-child(2) { border-top: 5px solid #0984e3; } /* 観光 */
-.card:nth-child(3) { border-top: 5px solid #00b894; } /* 自然 */
+.card:nth-child(1) {
+  border-top: 5px solid #ff6b35;
+}
+
+/* グルメ */
+.card:nth-child(2) {
+  border-top: 5px solid #0984e3;
+}
+
+/* 観光 */
+.card:nth-child(3) {
+  border-top: 5px solid #00b894;
+}
+
+/* 自然 */
 
 /* =========================
 🐶 検索中わんこアニメ
@@ -168,9 +180,12 @@ body.nature-theme .confetti {
 }
 
 @keyframes dogBounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-10px);
   }
@@ -220,7 +235,7 @@ body.nature-theme .confetti {
   font-size: 24px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
   display: none;
   align-items: center;
   justify-content: center;
@@ -239,7 +254,7 @@ body.nature-theme .confetti {
   gap: 14px;
   transition: right 0.25s ease;
   z-index: 5001;
-  box-shadow: -6px 0 20px rgba(0,0,0,0.35);
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.35);
   overflow-y: auto;
 }
 
@@ -250,7 +265,7 @@ body.nature-theme .confetti {
 .mobile-menu-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.55);
+  background: rgba(0, 0, 0, 0.55);
   z-index: 4990;
   opacity: 0;
   pointer-events: none;
@@ -303,7 +318,7 @@ body.nature-theme .confetti {
   }
 }
 
- .header {
+.header {
   padding: 20px 16px 12px;
 }
 
@@ -381,35 +396,140 @@ body.goodRoad-theme {
 }
 
 .loading-box {
-  background: rgba(255,255,255,0.9);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
 }
 
 .mobile-menu {
   background: #fff;
-  box-shadow: -6px 0 20px rgba(0,0,0,0.12);
-  border-left: 1px solid rgba(0,0,0,0.06);
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.12);
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .mobile-menu-overlay {
-  background: rgba(255,255,255,0.72);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(2px);
 }
 
 .mobile-menu a {
   background: #fff;
   color: #222;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .mobile-menu-close {
   background: #fff;
   color: #222;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .mobile-submenu-toggle {
   background: #fff;
   color: #222;
-  border: 1px solid rgba(0,0,0,0.06);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+
+body.gourmet-theme .panel-top input,
+body.gourmet-theme .panel-top select {
+  background: #fff0e7;
+  border: 2px solid rgba(255, 107, 53, 0.36);
+}
+
+body.tourism-theme .panel-top input,
+body.tourism-theme .panel-top select {
+  background: #ebf5ff;
+  border: 2px solid rgba(9, 132, 227, 0.34);
+}
+
+body.nature-theme .panel-top input,
+body.nature-theme .panel-top select {
+  background: #ebfff7;
+  border: 2px solid rgba(0, 184, 148, 0.34);
+}
+
+body.goodRoad-theme .panel-top input,
+body.goodRoad-theme .panel-top select {
+  background: #ebfafc;
+  border: 2px solid rgba(25, 167, 184, 0.34);
+}
+
+/* =========================
+🎨 ページ背景（テーマ別）
+========================= */
+
+/* グルメ */
+body.gourmet-theme {
+  background: linear-gradient(180deg, #fffdfb 0%, #fff3eb 100%);
+}
+
+/* 観光 */
+body.tourism-theme {
+  background: linear-gradient(180deg, #fbfdff 0%, #eef6ff 100%);
+}
+
+/* 自然 */
+body.nature-theme {
+  background: linear-gradient(180deg, #fbfffd 0%, #effcf7 100%);
+}
+
+/* 気持ちよく走れる道 */
+body.goodRoad-theme {
+  background: linear-gradient(180deg, #fbfeff 0%, #eefbfd 100%);
+}
+
+/* =========================
+🎨 入力エリア全体背景（テーマ別）
+========================= */
+
+body.gourmet-theme .panel-top {
+  background: linear-gradient(180deg, #fff7f2 0%, #fff1e8 100%);
+}
+
+body.tourism-theme .panel-top {
+  background: linear-gradient(180deg, #f4f9ff 0%, #edf6ff 100%);
+}
+
+body.nature-theme .panel-top {
+  background: linear-gradient(180deg, #f4fffb 0%, #ecfff7 100%);
+}
+
+body.goodRoad-theme .panel-top {
+  background: linear-gradient(180deg, #f4fcfd 0%, #ecfafc 100%);
+}
+
+/* =========================
+🎨 テーマ色で枠線・区切り線を統一
+========================= */
+
+.page-nav {
+  border-bottom: 3px solid var(--accent-color);
+}
+
+.page-nav button {
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.panel-top {
+  border-bottom: 3px solid var(--accent-color);
+}
+
+.panel-top input:focus,
+.panel-top select:focus {
+  border: 2px solid var(--accent-color);
+}
+
+.subTitle {
+  color: var(--accent-color);
+}
+
+.page-nav button:hover {
+  background: var(--accent-color);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.menu-toggle{
+  background: var(--accent-color);
+  color: white;
 }
