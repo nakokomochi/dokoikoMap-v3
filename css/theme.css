@@ -303,9 +303,9 @@ body.nature-theme .confetti {
   }
 }
 
-  .header {
-    padding-right: 70px;
-  }
+ .header {
+  padding: 20px 16px 12px;
+}
 
 
 
