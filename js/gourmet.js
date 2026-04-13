@@ -87,13 +87,184 @@ function searchGourmet() {
 // 結果クリア
 // ===============================
 function clearResults() {
-    document.getElementById("results").classList.remove("show");
-    document.getElementById("result1").innerHTML = "";
-    document.getElementById("result2").innerHTML = "";
-    document.getElementById("result3").innerHTML = "";
+    const resultsBox = document.getElementById("results");
+    if (!resultsBox) return;
+
+    resultsBox.classList.remove("show");
+    resultsBox.classList.remove("loading");
+
+    resultsBox.innerHTML = `
+        <div id="result1" class="result-item"></div>
+        <div id="result2" class="result-item"></div>
+        <div id="result3" class="result-item"></div>
+    `;
 
     spotMarkers.forEach(m => m.setMap(null));
     spotMarkers = [];
+
+    const rerollButton = document.getElementById("rerollButton");
+    if (rerollButton) {
+        rerollButton.classList.add("hidden");
+    }
+}
+
+// ===============================
+// 画像URL取得
+// ===============================
+function getSpotPhotoUrl(spot) {
+    if (spot.photos && spot.photos.length > 0) {
+        try {
+            return spot.photos[0].getUrl({
+                maxWidth: 640,
+                maxHeight: 420
+            });
+        } catch (e) {
+            return "";
+        }
+    }
+    return "";
+}
+
+// ===============================
+// タイプ整形
+// ===============================
+function formatGourmetTypes(types = []) {
+    const typeMap = {
+        restaurant: "レストラン",
+        cafe: "カフェ",
+        bar: "バー",
+        bakery: "ベーカリー",
+        meal_takeaway: "テイクアウト",
+        meal_delivery: "グルメスポット",
+        food: "飲食スポット",
+        point_of_interest: "人気スポット"
+    };
+
+    const labels = types
+        .map(type => typeMap[type])
+        .filter(Boolean);
+
+    if (labels.length > 0) {
+        return [...new Set(labels)].slice(0, 2).join("・");
+    }
+
+    return "グルメスポット";
+}
+
+// ===============================
+// ランダム文言
+// ===============================
+function pickRandomMessage(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) {
+        return "気になるグルメスポットです。";
+    }
+
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+// ===============================
+// 軽い説明文
+// ===============================
+function buildGourmetCatchCopy(spot) {
+    const rating = Number(spot?.rating || 0);
+    const reviews = Number(spot?.user_ratings_total || 0);
+    const types = Array.isArray(spot?.types) ? spot.types : [];
+
+    const isCafe = types.includes("cafe");
+    const isBakery = types.includes("bakery");
+    const isRestaurant = types.includes("restaurant");
+
+    if (isCafe) {
+        if (rating >= 4.2 && reviews >= 100) {
+            return pickRandomMessage([
+                "口コミ数も多く、ひと休み候補に選びたくなる人気カフェです。",
+                "休憩しながらゆったり過ごしたい日に良さそうな人気カフェです。",
+                "寄り道してのんびりしたくなる雰囲気のカフェ候補です。"
+            ]);
+        }
+
+        return pickRandomMessage([
+            "ひと休みしながら立ち寄りやすそうなカフェ候補です。",
+            "ツーリング途中の休憩にも合いそうなカフェです。",
+            "気軽に立ち寄ってひと息つけそうなカフェ候補です。"
+        ]);
+    }
+
+    if (isBakery) {
+        return pickRandomMessage([
+            "軽く立ち寄って楽しめそうなベーカリー候補です。",
+            "寄り道グルメとしてちょうど良さそうなベーカリーです。",
+            "ドライブ途中に立ち寄りたくなるパン系スポットです。"
+        ]);
+    }
+
+    if (isRestaurant && rating >= 4.2 && reviews >= 100) {
+        return pickRandomMessage([
+            "評価も口コミ数も高めで、満足感が期待できそうなお店です。",
+            "人気があり、目的地グルメとして選びやすそうなお店です。",
+            "しっかりごはんを楽しみたい日に向いていそうな人気店です。"
+        ]);
+    }
+
+    if (rating >= 4.0) {
+        return pickRandomMessage([
+            "立ち寄りグルメとして選びやすそうなお店です。",
+            "気軽にごはんを楽しみたい日に良さそうな候補です。",
+            "途中でおいしいものを食べたい日に合いそうなお店です。"
+        ]);
+    }
+
+    return pickRandomMessage([
+        "気になるグルメスポットとして立ち寄ってみたくなる候補です。",
+        "ドライブ途中のごはん候補としてちょうど良さそうです。",
+        "気分転換もかねて楽しめそうなグルメ候補です。"
+    ]);
+}
+
+// ===============================
+// 履歴保存
+// ===============================
+function saveGourmetHistoryItem(data) {
+    const key = "dokoiko_gourmet_history";
+    const current = JSON.parse(localStorage.getItem(key) || "[]");
+
+    const filtered = current.filter(item => item.placeId !== data.placeId);
+
+    filtered.unshift({
+        savedAt: new Date().toISOString(),
+        ...data
+    });
+
+    const trimmed = filtered.slice(0, 8);
+    localStorage.setItem(key, JSON.stringify(trimmed));
+}
+
+// ===============================
+// 共有
+// ===============================
+function shareGourmetResult(index) {
+    const card = document.getElementById(`result${index + 1}`);
+    if (!card) return;
+
+    const shareUrl = card.dataset.mapUrl || location.href;
+    const shareText = card.dataset.shareText || "どこいこMapでグルメスポットを見つけたよ！";
+
+    if (navigator.share) {
+        navigator.share({
+            title: "どこいこMap",
+            text: shareText,
+            url: shareUrl
+        }).catch(() => {});
+        return;
+    }
+
+    const xUrl =
+        "https://twitter.com/intent/tweet?text=" +
+        encodeURIComponent(shareText) +
+        "&url=" +
+        encodeURIComponent(shareUrl);
+
+    window.open(xUrl, "_blank");
 }
 
 // ===============================
@@ -236,12 +407,30 @@ function searchNearbyGourmet(lat, lng, distance, time, highway, index, retry = 0
 
             filtered.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
             const top = filtered.slice(0, 5);
+
+            if (!top.length) {
+                box.innerHTML = `<h3>🍽 グルメ</h3>見つかりませんでした`;
+                if (callback) callback();
+                return;
+            }
+
             const spot = top[Math.floor(Math.random() * top.length)];
 
             const slat = spot.geometry.location.lat();
             const slng = spot.geometry.location.lng();
             const rating = spot.rating || "評価なし";
             const reviews = spot.user_ratings_total || 0;
+            const photoUrl = getSpotPhotoUrl(spot);
+            const typeLabel = formatGourmetTypes(spot.types);
+            const catchCopy = buildGourmetCatchCopy(spot);
+
+            const mapUrl =
+                `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
+                `&destination=${encodeURIComponent(spot.name)}` +
+                `&destination_place_id=${spot.place_id}`;
+
+            const shareText =
+                `${spot.name} を見つけたよ！ 🍽グルメ / ⭐${rating} #どこいこMap`;
 
             const marker = new google.maps.Marker({
                 position: { lat: slat, lng: slng },
@@ -260,18 +449,52 @@ function searchNearbyGourmet(lat, lng, distance, time, highway, index, retry = 0
             });
             map.fitBounds(bounds);
 
+            saveGourmetHistoryItem({
+                pageType: "gourmet",
+                name: spot.name,
+                address: spot.vicinity || "",
+                rating: rating,
+                reviews: reviews,
+                distanceKm: Number(distance.toFixed(1)),
+                time: time,
+                highway: highway,
+                placeId: spot.place_id,
+                mapUrl: mapUrl,
+                photoUrl: photoUrl,
+                catchCopy: catchCopy
+            });
+
+            box.dataset.mapUrl = mapUrl;
+            box.dataset.shareText = shareText;
+
             box.innerHTML = `
 <div class="genre">
 <img src="../image/red_dog.png" class="genre-dog">
 🍽 グルメ</div>
 
+${photoUrl ? `
+<div class="spot-photo-wrap">
+    <img src="${photoUrl}" alt="${spot.name}" class="spot-photo" loading="lazy">
+</div>
+` : ""}
+
 <div class="spot-name">${spot.name}</div>
+<div class="spot-copy">${catchCopy || "気になるグルメスポットです。"}</div>
+
 📍 ${spot.vicinity || ""}<br>
 ⭐ ${rating} (${reviews}件)<br>
+🏷 ${typeLabel}<br>
 ⏱ 約${distance.toFixed(1)}km / ${time}分以内<br><br>
-<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}" target="_blank">
-🧭 Googleマップでナビ
-</a>
+
+<div class="result-actions">
+    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
+        🧭 Googleマップでナビ
+    </a>
+
+    <button type="button" class="share-button" onclick="shareGourmetResult(${index})">
+        共有する
+    </button>
+</div>
 `;
 
             if (callback) callback();
