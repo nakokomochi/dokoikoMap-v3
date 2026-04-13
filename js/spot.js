@@ -206,6 +206,133 @@ function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway
 }
 
 // ===============================
+// 画像URL取得
+// ===============================
+function getSpotPhotoUrl(spot) {
+    if (spot.photos && spot.photos.length > 0) {
+        try {
+            return spot.photos[0].getUrl({
+                maxWidth: 640,
+                maxHeight: 420
+            });
+        } catch (e) {
+            return "";
+        }
+    }
+    return "";
+}
+
+// ===============================
+// タイプ整形
+// ===============================
+function formatSpotTypes(types = [], genreName = "", keyword = "") {
+    const typeMap = {
+        cafe: "カフェ",
+        restaurant: "レストラン",
+        ramen_restaurant: "ラーメン",
+        tourist_attraction: "観光スポット",
+        park: "公園",
+        museum: "博物館",
+        art_gallery: "美術館",
+        shrine: "神社",
+        temple: "寺",
+        campground: "キャンプ場",
+        natural_feature: "自然スポット",
+        point_of_interest: "立ち寄りスポット"
+    };
+
+    const labels = types
+        .map(type => typeMap[type])
+        .filter(Boolean);
+
+    if (labels.length > 0) {
+        return [...new Set(labels)].slice(0, 2).join("・");
+    }
+
+    return keyword || genreName.replace(/[🔭⛩🍽🍜🌳🍃]/g, "");
+}
+
+// ===============================
+// 軽い説明文
+// ===============================
+function buildSpotCatchCopy(spot, genreName, keyword) {
+    const rating = Number(spot.rating || 0);
+    const reviews = Number(spot.user_ratings_total || 0);
+    const typeLabel = formatSpotTypes(spot.types, genreName, keyword);
+
+    if (genreName.includes("グルメ")) {
+        if (rating >= 4.2 && reviews >= 100) {
+            return `口コミ数も多い人気の${typeLabel}です。`;
+        }
+        if (rating >= 4.0) {
+            return `立ち寄り候補にしやすい評価高めの${typeLabel}です。`;
+        }
+        return `ツーリング途中にも寄りやすそうな${typeLabel}です。`;
+    }
+
+    if (genreName.includes("自然")) {
+        if (rating >= 4.2) {
+            return `景色や空気感を楽しみやすい${typeLabel}です。`;
+        }
+        return `気分転換の立ち寄り先になりそうな${typeLabel}です。`;
+    }
+
+    if (rating >= 4.2 && reviews >= 100) {
+        return `評価が高めで人気の${typeLabel}スポットです。`;
+    }
+
+    if (rating >= 4.0) {
+        return `立ち寄り先として選びやすい${typeLabel}スポットです。`;
+    }
+
+    return `ドライブやツーリングの途中で楽しめそうな${typeLabel}スポットです。`;
+}
+
+// ===============================
+// 履歴保存
+// ===============================
+function saveSpotHistoryItem(data) {
+    const key = "dokoiko_spot_history";
+    const current = JSON.parse(localStorage.getItem(key) || "[]");
+
+    current.unshift({
+        savedAt: new Date().toISOString(),
+        ...data
+    });
+
+    const trimmed = current.slice(0, 20);
+    localStorage.setItem(key, JSON.stringify(trimmed));
+}
+
+// ===============================
+// 共有
+// ===============================
+function shareSpotResult(index) {
+    const card = document.getElementById(`result${index + 1}`);
+    if (!card) return;
+
+    const shareUrl = card.dataset.mapUrl || location.href;
+    const shareText = card.dataset.shareText || "どこいこMapで行き先を見つけたよ！";
+
+    if (navigator.share) {
+        navigator.share({
+            title: "どこいこMap",
+            text: shareText,
+            url: shareUrl
+        }).catch(() => { });
+        return;
+    }
+
+    const xUrl =
+        "https://twitter.com/intent/tweet?text=" +
+        encodeURIComponent(shareText) +
+        "&url=" +
+        encodeURIComponent(shareUrl);
+
+    window.open(xUrl, "_blank");
+}
+
+// ===============================
 // 3ジャンル検索
 // ===============================
 function searchThreeGenres(lat, lng, distance, time, highway) {
@@ -385,6 +512,17 @@ function searchNearbySpotByGenre(
 
             const rating = spot.rating || "評価なし";
             const reviews = spot.user_ratings_total || 0;
+            const photoUrl = getSpotPhotoUrl(spot);
+            const typeLabel = formatSpotTypes(spot.types, genreName, keyword);
+            const catchCopy = buildSpotCatchCopy(spot, genreName, keyword);
+
+            const mapUrl =
+                `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
+                `&destination=${encodeURIComponent(spot.name)}` +
+                `&destination_place_id=${spot.place_id}`;
+
+            const shareText =
+                `${spot.name} を見つけたよ！ ${genreName} / ⭐${rating} #どこいこMap`;
 
             let dogImage = "image/yellow_dog.png";
 
@@ -423,30 +561,67 @@ function searchNearbySpotByGenre(
 
             map.fitBounds(bounds);
 
+            saveSpotHistoryItem({
+                pageType: "spot",
+                genreName: genreName,
+                keyword: keyword,
+                name: spot.name,
+                address: spot.vicinity || "",
+                rating: rating,
+                reviews: reviews,
+                distanceKm: Number(distance.toFixed(1)),
+                time: time,
+                highway: highway,
+                placeId: spot.place_id,
+                mapUrl: mapUrl,
+                photoUrl: photoUrl,
+                catchCopy: catchCopy
+            });
+
             if (box) {
+                box.dataset.mapUrl = mapUrl;
+                box.dataset.shareText = shareText;
+
                 box.innerHTML = `
 <div class="genre">
-<img src="${dogImage}" class="genre-dog">
-${genreName}</div>
+    <img src="${dogImage}" class="genre-dog">
+    ${genreName}
+</div>
+
+${photoUrl ? `
+<div class="spot-photo-wrap">
+    <img src="${photoUrl}" alt="${spot.name}" class="spot-photo" loading="lazy">
+</div>
+` : ""}
 
 <div class="spot-name">${spot.name}</div>
 
-📍 ${spot.vicinity || ""}<br>
+<div class="spot-copy">${catchCopy}</div>
+
+📍 ${spot.vicinity || "住所情報なし"}<br>
 
 ⭐ ${rating} (${reviews}件)<br>
+
+🏷 ${typeLabel}<br>
 
 🎯ジャンル：${keyword}<br><br>
 
 🚗約${distance.toFixed(1)}km<br>
 
 ⏱ ${time}分 ${time === 30
-                    ? "/ 下道のみ"
-                    : `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
-                }<br><br>
+                        ? "/ 下道のみ"
+                        : `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
+                    }<br><br>
 
-<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}" target="_blank">
-🧭 Googleマップでナビ
-</a>
+<div class="result-actions">
+    <a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
+        🧭 Googleマップでナビ
+    </a>
+
+    <button type="button" class="share-button" onclick="shareSpotResult(${index})">
+        共有する
+    </button>
+</div>
 `;
             }
 
