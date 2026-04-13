@@ -183,6 +183,47 @@ function ensureLoadingStyle() {
       color: #226b74;
     }
 
+    .fallback-note {
+      margin: 8px 0 12px;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      color: #3b7981;
+    }
+
+    .spot-photo-wrap {
+      margin: 12px 0;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .spot-photo {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 16 / 10;
+      object-fit: cover;
+    }
+
+    .spot-copy {
+      margin: 10px 0 14px;
+      line-height: 1.6;
+      font-size: 0.95rem;
+    }
+
+    .result-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .share-button {
+      border: none;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
     @keyframes dogBounce {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-10px); }
@@ -207,6 +248,10 @@ function showLoadingState() {
   const texts = ["検索中...", "検索中 .", "検索中 ..", "検索中 ..."];
   let i = 0;
 
+  if (loadingTimer) {
+    clearInterval(loadingTimer);
+  }
+
   loadingTimer = setInterval(() => {
     const el = document.getElementById("loadingText");
     if (!el) return;
@@ -227,6 +272,126 @@ function hideLoadingState() {
     <div id="result2" class="result-item"></div>
     <div id="result3" class="result-item"></div>
   `;
+}
+
+// ===============================
+// 画像URL取得
+// ===============================
+function getSpotPhotoUrl(spot) {
+  if (spot.photos && spot.photos.length > 0) {
+    try {
+      return spot.photos[0].getUrl({
+        maxWidth: 640,
+        maxHeight: 420
+      });
+    } catch (e) {
+      return "";
+    }
+  }
+  return "";
+}
+
+// ===============================
+// タイプ整形
+// ===============================
+function formatGoodRoadTypes(types = [], roadType) {
+  const typeMap = {
+    tourist_attraction: "立ち寄りスポット",
+    park: "公園",
+    point_of_interest: "スポット",
+    scenic_lookout: "展望スポット",
+    campground: "キャンプ場",
+    natural_feature: "自然スポット",
+    museum: "観光スポット"
+  };
+
+  const labels = types
+    .map(type => typeMap[type])
+    .filter(Boolean);
+
+  if (labels.length > 0) {
+    return [...new Set(labels)].slice(0, 2).join("・");
+  }
+
+  if (roadType && roadType.key === "relaxed") return "のんびり走りやすい道";
+  if (roadType && roadType.key === "scenic") return "景色を楽しみやすい道";
+  if (roadType && roadType.key === "mild_curve") return "緩いカーブを楽しみやすい道";
+
+  return "気持ちよく走れそうな道";
+}
+
+// ===============================
+// 軽い説明文
+// ===============================
+function buildGoodRoadCatchCopy(spot, roadType) {
+  const rating = Number(spot.rating || 0);
+  const reviews = Number(spot.user_ratings_total || 0);
+
+  if (roadType.key === "relaxed") {
+    if (rating >= 4.2 && reviews >= 100) {
+      return "のんびり景色を楽しみながら走りたい日に向いていそうです。";
+    }
+    return "混みすぎない雰囲気で、落ち着いて走りたい日に合いそうです。";
+  }
+
+  if (roadType.key === "scenic") {
+    if (rating >= 4.2) {
+      return "景色を楽しみながら走りたい日に立ち寄りたくなる候補です。";
+    }
+    return "景色重視で気分転換したいときに良さそうな候補です。";
+  }
+
+  if (rating >= 4.2 && reviews >= 100) {
+    return "緩いカーブや道の雰囲気を楽しみやすい人気候補です。";
+  }
+
+  return "走ること自体も楽しみたい日に向いていそうな候補です。";
+}
+
+// ===============================
+// 履歴保存
+// ===============================
+function saveGoodRoadHistoryItem(data) {
+  const key = "dokoiko_goodroad_history";
+  const current = JSON.parse(localStorage.getItem(key) || "[]");
+
+  const filtered = current.filter(item => item.placeId !== data.placeId);
+
+  filtered.unshift({
+    savedAt: new Date().toISOString(),
+    ...data
+  });
+
+  const trimmed = filtered.slice(0, 8);
+  localStorage.setItem(key, JSON.stringify(trimmed));
+}
+
+// ===============================
+// 共有
+// ===============================
+function shareGoodRoadResult(index) {
+  const card = document.getElementById(`result${index + 1}`);
+  if (!card) return;
+
+  const shareUrl = card.dataset.mapUrl || location.href;
+  const shareText = card.dataset.shareText || "どこいこMapで気持ちよく走れそうな道を見つけたよ！";
+
+  if (navigator.share) {
+    navigator.share({
+      title: "どこいこMap",
+      text: shareText,
+      url: shareUrl
+    }).catch(() => {});
+    return;
+  }
+
+  const xUrl =
+    "https://twitter.com/intent/tweet?text=" +
+    encodeURIComponent(shareText) +
+    "&url=" +
+    encodeURIComponent(shareUrl);
+
+  window.open(xUrl, "_blank");
 }
 
 // ===============================
@@ -668,6 +833,17 @@ function searchNearbyGoodRoad(lat, lng, distance, time, highway, index, roadType
         const slng = spot.geometry.location.lng();
         const rating = spot.rating || "評価なし";
         const reviews = spot.user_ratings_total || 0;
+        const photoUrl = getSpotPhotoUrl(spot);
+        const typeLabel = formatGoodRoadTypes(spot.types, currentRoadType);
+        const catchCopy = buildGoodRoadCatchCopy(spot, currentRoadType);
+
+        const mapUrl =
+          `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
+          `&destination=${encodeURIComponent(spot.name)}` +
+          `&destination_place_id=${spot.place_id}`;
+
+        const shareText =
+          `${spot.name} を見つけたよ！ ${currentRoadType.label} / ⭐${rating} #どこいこMap`;
 
         const marker = new google.maps.Marker({
           position: { lat: slat, lng: slng },
@@ -687,6 +863,26 @@ function searchNearbyGoodRoad(lat, lng, distance, time, highway, index, roadType
             ? `<div class="fallback-note">※近い候補が少なかったため「${currentRoadType.label}」で表示しています</div>`
             : "";
 
+        saveGoodRoadHistoryItem({
+          pageType: "goodRoad",
+          roadTypeKey: currentRoadType.key,
+          roadTypeLabel: currentRoadType.label,
+          name: spot.name,
+          address: spot.vicinity || "",
+          rating: rating,
+          reviews: reviews,
+          distanceKm: Number(distance.toFixed(1)),
+          time: time,
+          highway: highway,
+          placeId: spot.place_id,
+          mapUrl: mapUrl,
+          photoUrl: photoUrl,
+          catchCopy: catchCopy
+        });
+
+        box.dataset.mapUrl = mapUrl;
+        box.dataset.shareText = shareText;
+
         box.innerHTML = `
           <div class="genre">
             <img src="../image/red_dog.png" class="genre-dog">
@@ -694,17 +890,34 @@ function searchNearbyGoodRoad(lat, lng, distance, time, highway, index, roadType
           </div>
 
           ${fallbackNote}
+
+          ${photoUrl ? `
+          <div class="spot-photo-wrap">
+            <img src="${photoUrl}" alt="${spot.name}" class="spot-photo" loading="lazy">
+          </div>
+          ` : ""}
+
           <div class="spot-name">${spot.name}</div>
+          <div class="spot-copy">${catchCopy}</div>
+
           📍 ${spot.vicinity || "住所情報なし"}<br>
           ⭐ ${rating} (${reviews}件)<br>
-          ⏱ 約${distance.toFixed(1)}km / ${time}分以内<br><br>
-          <a
-            href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            🧭 Googleマップでナビ
-          </a>
+          🏷 ${typeLabel}<br>
+          🚗 約${distance.toFixed(1)}km / ${time}分以内<br><br>
+
+          <div class="result-actions">
+            <a
+              href="${mapUrl}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              🧭 Googleマップでナビ
+            </a>
+
+            <button type="button" class="share-button" onclick="shareGoodRoadResult(${index})">
+              共有する
+            </button>
+          </div>
         `;
 
         if (callback) callback(true, currentRoadType);
@@ -979,7 +1192,6 @@ window.addEventListener("DOMContentLoaded", function () {
   timeSelect.addEventListener("change", updateHighwayControl);
   updateHighwayControl();
 });
-
 
 function hasRealResults() {
   const ids = ["result1", "result2", "result3"];
