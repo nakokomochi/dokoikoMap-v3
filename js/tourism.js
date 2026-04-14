@@ -17,7 +17,6 @@ const TOKYO_STATION_POSITION = {
 
 const EXCLUDE_DISTANCE_KM = 3;
 let loadingTimer = null;
-let completedTourismResults = 0;
 
 // ===============================
 // Google Map 初期表示
@@ -33,7 +32,6 @@ function initMap() {
 // 検索開始
 // ===============================
 function searchTourism() {
-
     const startAddress = document.getElementById("startLocation").value;
     startAddressGlobal = startAddress;
 
@@ -46,12 +44,11 @@ function searchTourism() {
     const highway = document.getElementById("highway").value;
 
     clearResults();
-    showLoadingState("検索中...", "わんこが目的地を探してるよ");
+    showLoadingState("検索中...", "わんこが観光スポットを探してるよ");
 
     const geocoder = new google.maps.Geocoder();
 
     geocoder.geocode({ address: startAddress }, function (results, status) {
-
         if (status !== "OK" || !results[0]) {
             hideLoadingState();
             alert("出発地を取得できませんでした");
@@ -77,9 +74,7 @@ function searchTourism() {
         });
 
         const maxDistance = maxDistanceByTime(time, highway);
-
         findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway);
-
     });
 }
 
@@ -88,43 +83,223 @@ function searchTourism() {
 // ===============================
 function clearResults() {
     const resultsBox = document.getElementById("results");
-    if (resultsBox) {
-        resultsBox.classList.remove("show");
-        resultsBox.classList.remove("loading");
-        resultsBox.innerHTML = `
-            <div id="result1" class="result-item"></div>
-            <div id="result2" class="result-item"></div>
-            <div id="result3" class="result-item"></div>
-        `;
-    }
+    if (!resultsBox) return;
+
+    resultsBox.classList.remove("show");
+    resultsBox.classList.remove("loading");
+
+    resultsBox.innerHTML = `
+        <div id="result1" class="result-item"></div>
+        <div id="result2" class="result-item"></div>
+        <div id="result3" class="result-item"></div>
+    `;
 
     if (loadingTimer) {
         clearInterval(loadingTimer);
         loadingTimer = null;
     }
 
-    completedTourismResults = 0;
-
     spotMarkers.forEach(m => m.setMap(null));
     spotMarkers = [];
+
+    const rerollButton = document.getElementById("rerollButton");
+    if (rerollButton) {
+        rerollButton.classList.add("hidden");
+    }
 }
 
 // ===============================
-// ランダム座標生成（0～maxDistanceKm）
+// 画像URL取得
 // ===============================
-function createRandomPoint(lat, lng, maxDistanceKm) {
-    const radiusKm = Math.random() * maxDistanceKm;
-    const radiusInDegrees = radiusKm / 111;
+function getSpotPhotoUrl(spot) {
+    if (spot.photos && spot.photos.length > 0) {
+        try {
+            return spot.photos[0].getUrl({
+                maxWidth: 640,
+                maxHeight: 420
+            });
+        } catch (e) {
+            return "";
+        }
+    }
+    return "";
+}
+
+// ===============================
+// タイプ整形
+// ===============================
+function formatTourismTypes(types = [], spotName = "") {
+    const joinedName = String(spotName || "");
+
+    if (joinedName.includes("道の駅")) return "道の駅";
+
+    const typeMap = {
+        tourist_attraction: "観光スポット",
+        museum: "博物館",
+        art_gallery: "美術館",
+        park: "公園",
+        aquarium: "水族館",
+        zoo: "動物園",
+        amusement_park: "レジャースポット",
+        shopping_mall: "ショッピング",
+        hindu_temple: "寺院",
+        place_of_worship: "名所",
+        point_of_interest: "人気スポット",
+        establishment: "立ち寄りスポット"
+    };
+
+    const labels = types
+        .map(type => typeMap[type])
+        .filter(Boolean);
+
+    if (labels.length > 0) {
+        return [...new Set(labels)].slice(0, 2).join("・");
+    }
+
+    return "観光スポット";
+}
+
+// ===============================
+// ランダム文言
+// ===============================
+function pickRandomMessage(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) {
+        return "気になる観光スポットです。";
+    }
+
+    return messages[Math.floor(Math.random() * messages.length)];
+}
+
+// ===============================
+// 軽い説明文
+// ===============================
+function buildTourismCatchCopy(spot) {
+    const rating = Number(spot?.rating || 0);
+    const reviews = Number(spot?.user_ratings_total || 0);
+    const types = Array.isArray(spot?.types) ? spot.types : [];
+    const name = String(spot?.name || "");
+
+    if (name.includes("道の駅")) {
+        return pickRandomMessage([
+            "休憩も寄り道も楽しみやすい道の駅候補です。",
+            "ツーリング途中に立ち寄りやすそうな道の駅です。",
+            "ご当地感も味わいやすい道の駅候補です。"
+        ]);
+    }
+
+    if (types.includes("shopping_mall")) {
+        return pickRandomMessage([
+            "気軽に立ち寄って過ごしやすそうなレジャースポットです。",
+            "休憩や買い物もあわせて楽しめそうな候補です。",
+            "雨の日の寄り道先としても使いやすそうです。"
+        ]);
+    }
+
+    if (types.includes("museum") || types.includes("art_gallery")) {
+        return pickRandomMessage([
+            "その土地らしさを感じながらゆっくり楽しめそうなスポットです。",
+            "落ち着いて立ち寄りたい日に合いそうな文化系スポットです。",
+            "寄り道しながら雰囲気も楽しめそうな候補です。"
+        ]);
+    }
+
+    if (types.includes("park")) {
+        return pickRandomMessage([
+            "景色や空気感を楽しみながら立ち寄れそうなスポットです。",
+            "ひと息つきながら寄り道しやすそうな場所です。",
+            "のんびり過ごしたい日にちょうど良さそうです。"
+        ]);
+    }
+
+    if (rating >= 4.2 && reviews >= 100) {
+        return pickRandomMessage([
+            "評価も口コミ数も高めで、立ち寄り先として期待できそうです。",
+            "人気があり、観光寄りの目的地として選びやすそうです。",
+            "満足感のある寄り道先になってくれそうな人気スポットです。"
+        ]);
+    }
+
+    if (rating >= 4.0) {
+        return pickRandomMessage([
+            "気分転換の寄り道先としてちょうど良さそうです。",
+            "ドライブ途中に立ち寄って楽しめそうなスポットです。",
+            "その土地らしさを感じに行く候補として良さそうです。"
+        ]);
+    }
+
+    return pickRandomMessage([
+        "気軽な寄り道先として見てみたくなる観光候補です。",
+        "ドライブやツーリング途中に立ち寄りやすそうです。",
+        "次の目的地候補として雰囲気が良さそうなスポットです。"
+    ]);
+}
+
+// ===============================
+// 履歴保存
+// ===============================
+function saveTourismHistoryItem(data) {
+    const key = "dokoiko_tourism_history";
+    const current = JSON.parse(localStorage.getItem(key) || "[]");
+
+    const filtered = current.filter(item => item.placeId !== data.placeId);
+
+    filtered.unshift({
+        savedAt: new Date().toISOString(),
+        ...data
+    });
+
+    const trimmed = filtered.slice(0, 8);
+    localStorage.setItem(key, JSON.stringify(trimmed));
+}
+
+// ===============================
+// 共有
+// ===============================
+function shareTourismResult(index) {
+    const card = document.getElementById(`result${index + 1}`);
+    if (!card) return;
+
+    const shareUrl = card.dataset.mapUrl || location.href;
+    const shareText = card.dataset.shareText || "どこいこMapで観光スポットを見つけたよ！";
+
+    if (navigator.share) {
+        navigator.share({
+            title: "どこいこMap",
+            text: shareText,
+            url: shareUrl
+        }).catch(() => { });
+        return;
+    }
+
+    const xUrl =
+        "https://twitter.com/intent/tweet?text=" +
+        encodeURIComponent(shareText) +
+        "&url=" +
+        encodeURIComponent(shareUrl);
+
+    window.open(xUrl, "_blank");
+}
+
+// ===============================
+// ランダム座標生成
+// 観光版は30分でも近場固定にしない
+// ===============================
+function createRandomPoint(lat, lng, minDistanceKm, maxDistanceKm) {
+    const minR = minDistanceKm / 111;
+    const maxR = maxDistanceKm / 111;
 
     const u = Math.random();
     const v = Math.random();
-    const w = radiusInDegrees * Math.sqrt(u);
+
+    const r = Math.sqrt((maxR * maxR - minR * minR) * u + minR * minR);
     const t = 2 * Math.PI * v;
 
-    const newLat = lat + w * Math.cos(t);
-    const newLng = lng + w * Math.sin(t) / Math.cos(lat * Math.PI / 180);
+    const newLat = lat + r * Math.cos(t);
+    const newLng = lng + r * Math.sin(t) / Math.cos(lat * Math.PI / 180);
 
-    return { lat: newLat, lng: newLng, distanceKm: radiusKm };
+    const distanceKm = r * 111;
+
+    return { lat: newLat, lng: newLng, distanceKm };
 }
 
 // ===============================
@@ -132,8 +307,19 @@ function createRandomPoint(lat, lng, maxDistanceKm) {
 // ===============================
 function maxDistanceByTime(time, highway) {
     const hours = time / 60;
-    let speed = highway === "yes" ? HIGHWAY_SPEED : LOCAL_SPEED;
+    const speed = highway === "yes" ? HIGHWAY_SPEED : LOCAL_SPEED;
     return hours * speed;
+}
+
+// ===============================
+// 最小距離計算（ドーナツ型用）
+// ===============================
+function getMinDistanceByTime(maxDistance, time, highway) {
+    if (time === 30) return 0;
+    if (time === 60) return maxDistance * 0.38;
+    if (time === 90) return maxDistance * 0.45;
+    if (time === 120) return maxDistance * 0.55;
+    return 0;
 }
 
 // ===============================
@@ -162,11 +348,13 @@ function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway
         return;
     }
 
-    const point = createRandomPoint(startLat, startLng, maxDistance);
+    const minDistance = getMinDistanceByTime(maxDistance, time, highway);
+    const point = createRandomPoint(startLat, startLng, minDistance, maxDistance);
 
     geocoder.geocode({ location: { lat: point.lat, lng: point.lng } }, function (results, status) {
         if (status === "OK" && results[0]) {
             let prefecture = "";
+
             for (const comp of results[0].address_components) {
                 if (comp.types.includes("administrative_area_level_1")) {
                     prefecture = comp.long_name;
@@ -187,20 +375,30 @@ function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway
 // 3つの観光検索
 // ===============================
 function searchThreeTourism(lat, lng, distance, time, highway) {
-    completedTourismResults = 0;
+    let completed = 0;
 
     for (let i = 0; i < 3; i++) {
-        searchNearbyTourism(lat, lng, distance, time, highway, i);
-    }
+        searchNearbyTourism(lat, lng, distance, time, highway, i, 0, function () {
+            completed++;
 
-    document.getElementById("rerollButton").classList.remove("hidden");
+            if (completed === 3) {
+                hideLoadingState();
+                showResultWithEffect();
+
+                const rerollButton = document.getElementById("rerollButton");
+                if (rerollButton) {
+                    rerollButton.classList.remove("hidden");
+                }
+            }
+        });
+    }
 }
 
 // ===============================
 // Places API検索（観光版）
+// 道の駅も拾いやすいように type を固定しすぎない
 // ===============================
-function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0) {
-
+function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0, callback = null) {
     const service = new google.maps.places.PlacesService(map);
     const box = document.getElementById(`result${index + 1}`);
 
@@ -208,25 +406,49 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
     if (retry === 1) radius *= 1.8;
     if (retry === 2) radius *= 2.5;
 
+    const tourismKeywordSets = [
+        ["展望台", "絶景", "景勝地"],
+        ["道の駅", "観光案内所"],
+        ["公園", "庭園"],
+        ["博物館", "美術館", "資料館"],
+        ["水族館", "動物園"],
+        ["ショッピングモール", "レジャー"],
+        ["神社", "寺"]
+    ];
+
+    let selectedKeywords;
+
+    if (retry === 0) {
+        selectedKeywords =
+            tourismKeywordSets[Math.floor(Math.random() * tourismKeywordSets.length)];
+    } else if (retry === 1) {
+        selectedKeywords = ["道の駅", "公園", "展望台", "博物館"];
+    } else if (retry === 2) {
+        selectedKeywords = ["観光", "レジャー", "名所"];
+    } else {
+        selectedKeywords = ["観光スポット"];
+    }
+
+    const keyword = selectedKeywords.join(" ");
+
     service.nearbySearch(
         {
             location: { lat: lat, lng: lng },
             radius: radius,
-            keyword: "観光名所 絶景 展望台 神社 寺 道の駅",
-            type: "tourist_attraction"
+            keyword: keyword
         },
         function (results, status) {
-
             if (status !== google.maps.places.PlacesServiceStatus.OK || !results || results.length === 0) {
-                if (retry < 2) {
-                    searchNearbyTourism(lat, lng, distance, time, highway, index, retry + 1);
+                if (retry < 3) {
+                    searchNearbyTourism(lat, lng, distance, time, highway, index, retry + 1, callback);
                     return;
                 }
 
                 if (box) {
                     box.innerHTML = `<h3>🏯 観光</h3>見つかりませんでした`;
                 }
-                handleTourismResultRendered();
+
+                if (callback) callback();
                 return;
             }
 
@@ -236,10 +458,13 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
             filtered = filtered.filter(place => {
                 const plat = place.geometry.location.lat();
                 const plng = place.geometry.location.lng();
-                for (let marker of spotMarkers) {
+
+                for (const marker of spotMarkers) {
                     if (!marker || !marker.getPosition) continue;
                     const pos = marker.getPosition();
-                    if (calcDistance(plat, plng, pos.lat(), pos.lng()) < EXCLUDE_DISTANCE_KM) return false;
+                    if (calcDistance(plat, plng, pos.lat(), pos.lng()) < EXCLUDE_DISTANCE_KM) {
+                        return false;
+                    }
                 }
                 return true;
             });
@@ -248,12 +473,29 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
 
             filtered.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
             const top = filtered.slice(0, 5);
-            const spot = top[Math.floor(Math.random() * top.length)];
 
+            if (!top.length) {
+                box.innerHTML = `<h3>🏯 観光</h3>見つかりませんでした`;
+                if (callback) callback();
+                return;
+            }
+
+            const spot = top[Math.floor(Math.random() * top.length)];
             const slat = spot.geometry.location.lat();
             const slng = spot.geometry.location.lng();
             const rating = spot.rating || "評価なし";
             const reviews = spot.user_ratings_total || 0;
+            const photoUrl = getSpotPhotoUrl(spot);
+            const typeLabel = formatTourismTypes(spot.types, spot.name);
+            const catchCopy = buildTourismCatchCopy(spot);
+
+            const mapUrl =
+                `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
+                `&destination=${encodeURIComponent(spot.name)}` +
+                `&destination_place_id=${spot.place_id}`;
+
+            const shareText =
+                `${spot.name} を見つけたよ！ 🏯観光 / ⭐${rating} #どこいこMap`;
 
             const marker = new google.maps.Marker({
                 position: { lat: slat, lng: slng },
@@ -267,41 +509,62 @@ function searchNearbyTourism(lat, lng, distance, time, highway, index, retry = 0
 
             const bounds = new google.maps.LatLngBounds();
             if (startMarker && startMarker.getPosition) bounds.extend(startMarker.getPosition());
-            spotMarkers.forEach(m => { if (m && m.getPosition) bounds.extend(m.getPosition()); });
+            spotMarkers.forEach(m => {
+                if (m && m.getPosition) bounds.extend(m.getPosition());
+            });
             map.fitBounds(bounds);
 
-            if (box) {
-                box.innerHTML = `
+            saveTourismHistoryItem({
+                pageType: "tourism",
+                name: spot.name,
+                address: spot.vicinity || "",
+                rating: rating,
+                reviews: reviews,
+                distanceKm: Number(distance.toFixed(1)),
+                time: time,
+                highway: highway,
+                placeId: spot.place_id,
+                mapUrl: mapUrl,
+                photoUrl: photoUrl,
+                catchCopy: catchCopy
+            });
+
+            box.dataset.mapUrl = mapUrl;
+            box.dataset.shareText = shareText;
+
+            box.innerHTML = `
 <div class="genre">
 <img src="../image/yellow_dog.png" class="genre-dog">
 🏯 観光</div>
 
+${photoUrl ? `
+<div class="spot-photo-wrap">
+<img src="${photoUrl}" alt="${spot.name}" class="spot-photo" loading="lazy">
+</div>
+` : ""}
+
 <div class="spot-name">${spot.name}</div>
+<div class="spot-copy">${catchCopy || "気になる観光スポットです。"}</div>
+
 📍 ${spot.vicinity || ""}<br>
 ⭐ ${rating} (${reviews}件)<br>
+🏷 ${typeLabel}<br>
 ⏱ 約${distance.toFixed(1)}km / ${time}分以内<br><br>
-<a href="https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}" target="_blank">
+
+<div class="result-actions">
+<a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
 🧭 Googleマップでナビ
 </a>
-`;
-            }
 
-            handleTourismResultRendered();
+<button type="button" class="share-button" onclick="shareTourismResult(${index})">
+共有する
+</button>
+</div>
+`;
+
+            if (callback) callback();
         }
     );
-}
-
-// ===============================
-// 結果描画完了カウント
-// ===============================
-function handleTourismResultRendered() {
-    completedTourismResults++;
-
-    if (completedTourismResults === 1) {
-        hideLoadingState();
-        document.getElementById("results").classList.add("show");
-        showResultWithEffect();
-    }
 }
 
 // ===============================
@@ -320,6 +583,7 @@ function showResultWithEffect() {
 // ===============================
 function launchConfetti() {
     const colors = ["#ff7675", "#74b9ff", "#55efc4", "#ffeaa7", "#a29bfe"];
+
     for (let i = 0; i < 40; i++) {
         const confetti = document.createElement("div");
         confetti.classList.add("confetti");
@@ -327,7 +591,10 @@ function launchConfetti() {
         confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
         confetti.style.animationDuration = 2 + Math.random() * 2 + "s";
         document.body.appendChild(confetti);
-        setTimeout(() => { confetti.remove(); }, 4000);
+
+        setTimeout(() => {
+            confetti.remove();
+        }, 4000);
     }
 }
 
@@ -335,9 +602,9 @@ function launchConfetti() {
 // もう一回まわす
 // ===============================
 function rerollTourism() {
-    if (!startLat || !startLng) { 
-        alert("先に検索してね！"); 
-        return; 
+    if (!startLat || !startLng) {
+        alert("先に検索してね！");
+        return;
     }
 
     const time = Number(document.getElementById("timeSelect").value);
@@ -346,7 +613,7 @@ function rerollTourism() {
     const maxDistance = maxDistanceByTime(time, highway);
 
     clearResults();
-    showLoadingState("検索中...", "わんこが目的地を探してるよ");
+    showLoadingState("検索中...", "わんこが観光スポットを探してるよ");
     findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway);
 }
 
@@ -354,23 +621,25 @@ function rerollTourism() {
 // 現在地取得
 // ===============================
 function getCurrentLocation() {
-    if (!navigator.geolocation) { 
-        alert("このブラウザでは位置情報が使えません"); 
-        return; 
+    if (!navigator.geolocation) {
+        alert("このブラウザでは位置情報が使えません");
+        return;
     }
+
     navigator.geolocation.getCurrentPosition(function (position) {
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
         const geocoder = new google.maps.Geocoder();
+
         geocoder.geocode({ location: { lat: lat, lng: lng } }, function (results, status) {
             if (status === "OK" && results[0]) {
                 document.getElementById("startLocation").value = results[0].formatted_address;
-            } else { 
-                alert("住所を取得できませんでした"); 
+            } else {
+                alert("住所を取得できませんでした");
             }
         });
-    }, function () { 
-        alert("現在地を取得できませんでした"); 
+    }, function () {
+        alert("現在地を取得できませんでした");
     });
 }
 
@@ -380,6 +649,7 @@ function getCurrentLocation() {
 function updateHighwayControl() {
     const time = document.getElementById("timeSelect").value;
     const highwaySelect = document.getElementById("highway");
+
     if (time === "30") {
         highwaySelect.value = "no";
         highwaySelect.disabled = true;
@@ -388,7 +658,6 @@ function updateHighwayControl() {
     }
 }
 
-// ページ読み込み後イベント
 window.addEventListener("DOMContentLoaded", function () {
     const timeSelect = document.getElementById("timeSelect");
     timeSelect.addEventListener("change", updateHighwayControl);
