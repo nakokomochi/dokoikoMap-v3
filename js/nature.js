@@ -339,7 +339,7 @@ function calcDistance(lat1, lng1, lat2, lng2) {
 // ランダムポイント検索
 // ===============================
 function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt = 0) {
-    if (attempt > 15) {
+    if (attempt > 8) {
         hideLoadingState();
         alert("海に当たってしまいました、もう一度回してください");
         return;
@@ -368,36 +368,57 @@ function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway
     });
 }
 
+
 // ===============================
 // 3つの自然検索
+// 1回検索して3件選ぶ方式
 // ===============================
 function searchThreeNature(lat, lng, distance, time, highway) {
-    let completed = 0;
+    searchNearbyNature(lat, lng, distance, time, highway, 0, 0, function (selectedSpots) {
+        hideLoadingState();
 
-    for (let i = 0; i < 3; i++) {
-        searchNearbyNature(lat, lng, distance, time, highway, i, 0, function () {
-            completed++;
-
-            if (completed === 3) {
-                hideLoadingState();
-                showResultWithEffect();
-
-                const rerollButton = document.getElementById("rerollButton");
-                if (rerollButton) {
-                    rerollButton.classList.remove("hidden");
+        if (!Array.isArray(selectedSpots) || selectedSpots.length === 0) {
+            for (let i = 0; i < 3; i++) {
+                const box = document.getElementById(`result${i + 1}`);
+                if (box) {
+                    box.innerHTML = `<h3>🌿 自然</h3>見つかりませんでした`;
                 }
             }
+            showResultWithEffect();
+            return;
+        }
+
+        selectedSpots.forEach((spot, index) => {
+            renderNatureSpotCard(spot, index, distance, time, highway);
         });
-    }
+
+        // 3件未満なら空欄にする
+        for (let i = selectedSpots.length; i < 3; i++) {
+            const box = document.getElementById(`result${i + 1}`);
+            if (box) {
+                box.innerHTML = `<h3>🌿 自然</h3>見つかりませんでした`;
+            }
+        }
+
+        showResultWithEffect();
+
+        const rerollButton = document.getElementById("rerollButton");
+        if (rerollButton) {
+            rerollButton.classList.remove("hidden");
+        }
+    });
 }
 
 // ===============================
 // Places API検索（自然版）
 // park固定をやめて自然候補を広げる
 // ===============================
+// ===============================
+// Places API検索（自然版）
+// 1回の検索結果から3件選ぶ
+// ===============================
 function searchNearbyNature(lat, lng, distance, time, highway, index, retry = 0, callback = null) {
     const service = new google.maps.places.PlacesService(map);
-    const box = document.getElementById(`result${index + 1}`);
 
     let radius = Math.max(distance * 1000, 5000);
     if (retry === 1) radius *= 1.8;
@@ -440,95 +461,113 @@ function searchNearbyNature(lat, lng, distance, time, highway, index, retry = 0,
                     return;
                 }
 
-                if (box) {
-                    box.innerHTML = `<h3>🌿 自然</h3>見つかりませんでした`;
-                }
-
-                if (callback) callback();
+                if (callback) callback([]);
                 return;
             }
 
             let filtered = results.filter(r => (r.rating || 0) >= 4.0);
             if (filtered.length === 0) filtered = results;
 
-            filtered = filtered.filter(place => {
+            // place_id重複を除外
+            const uniqueMap = new Map();
+            filtered.forEach(place => {
+                if (place.place_id && !uniqueMap.has(place.place_id)) {
+                    uniqueMap.set(place.place_id, place);
+                }
+            });
+            filtered = Array.from(uniqueMap.values());
+
+            filtered.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
+
+            const selectedSpots = [];
+            for (const place of filtered) {
+                if (selectedSpots.length >= 3) break;
+
                 const plat = place.geometry.location.lat();
                 const plng = place.geometry.location.lng();
 
-                for (const marker of spotMarkers) {
-                    if (!marker || !marker.getPosition) continue;
-                    const pos = marker.getPosition();
-                    if (calcDistance(plat, plng, pos.lat(), pos.lng()) < EXCLUDE_DISTANCE_KM) {
-                        return false;
-                    }
+                const tooClose = selectedSpots.some(selected => {
+                    const slat = selected.geometry.location.lat();
+                    const slng = selected.geometry.location.lng();
+                    return calcDistance(plat, plng, slat, slng) < EXCLUDE_DISTANCE_KM;
+                });
+
+                if (!tooClose) {
+                    selectedSpots.push(place);
                 }
-                return true;
-            });
-
-            if (filtered.length === 0) filtered = results;
-
-            filtered.sort((a, b) => (b.user_ratings_total || 0) - (a.user_ratings_total || 0));
-            const top = filtered.slice(0, 5);
-
-            if (!top.length) {
-                box.innerHTML = `<h3>🌿 自然</h3>見つかりませんでした`;
-                if (callback) callback();
-                return;
             }
 
-            const spot = top[Math.floor(Math.random() * top.length)];
-            const slat = spot.geometry.location.lat();
-            const slng = spot.geometry.location.lng();
-            const rating = spot.rating || "評価なし";
-            const reviews = spot.user_ratings_total || 0;
-            const photoUrl = getSpotPhotoUrl(spot);
-            const typeLabel = formatNatureTypes(spot.types, spot.name);
-            const catchCopy = buildNatureCatchCopy(spot);
-
-            const mapUrl =
-                `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
-                `&destination=${encodeURIComponent(spot.name)}` +
-                `&destination_place_id=${spot.place_id}`;
-
-            const shareText =
-                `${spot.name} を見つけたよ！ 🌿自然 / ⭐${rating} #どこいこMap`;
-
-            const marker = new google.maps.Marker({
-                position: { lat: slat, lng: slng },
-                map: map,
-                icon: {
-                    url: "../image/green_dog.png",
-                    scaledSize: new google.maps.Size(50, 50)
+            // 近すぎ判定で足りない時は上位から補完
+            if (selectedSpots.length < 3) {
+                for (const place of filtered) {
+                    if (selectedSpots.length >= 3) break;
+                    if (!selectedSpots.some(s => s.place_id === place.place_id)) {
+                        selectedSpots.push(place);
+                    }
                 }
-            });
-            spotMarkers.push(marker);
+            }
 
-            const bounds = new google.maps.LatLngBounds();
-            if (startMarker && startMarker.getPosition) bounds.extend(startMarker.getPosition());
-            spotMarkers.forEach(m => {
-                if (m && m.getPosition) bounds.extend(m.getPosition());
-            });
-            map.fitBounds(bounds);
+            if (callback) callback(selectedSpots.slice(0, 3));
+        }
+    );
+}
 
-            saveNatureHistoryItem({
-                pageType: "nature",
-                name: spot.name,
-                address: spot.vicinity || "",
-                rating: rating,
-                reviews: reviews,
-                distanceKm: Number(distance.toFixed(1)),
-                time: time,
-                highway: highway,
-                placeId: spot.place_id,
-                mapUrl: mapUrl,
-                photoUrl: photoUrl,
-                catchCopy: catchCopy
-            });
+// ===============================
+// 自然スポット描画
+// ===============================
+function renderNatureSpotCard(spot, index, distance, time, highway) {
+    const box = document.getElementById(`result${index + 1}`);
+    if (!box || !spot) return;
 
-            box.dataset.mapUrl = mapUrl;
-            box.dataset.shareText = shareText;
+    const slat = spot.geometry.location.lat();
+    const slng = spot.geometry.location.lng();
 
-            box.innerHTML = `
+    // 出発地から各スポットまでの直線距離
+    const directDistanceKm = calcDistance(startLat, startLng, slat, slng);
+
+    const rating = spot.rating || "評価なし";
+    const reviews = spot.user_ratings_total || 0;
+    const photoUrl = getSpotPhotoUrl(spot);
+    const typeLabel = formatNatureTypes(spot.types, spot.name);
+    const catchCopy = buildNatureCatchCopy(spot);
+
+    const mapUrl =
+        `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
+        `&destination=${encodeURIComponent(spot.name)}` +
+        `&destination_place_id=${spot.place_id}`;
+
+    const shareText =
+        `${spot.name} を見つけたよ！ 🌿自然 / ⭐${rating} #どこいこMap`;
+
+    const marker = new google.maps.Marker({
+        position: { lat: slat, lng: slng },
+        map: map,
+        icon: {
+            url: "../image/green_dog.png",
+            scaledSize: new google.maps.Size(50, 50)
+        }
+    });
+    spotMarkers.push(marker);
+
+    saveNatureHistoryItem({
+        pageType: "nature",
+        name: spot.name,
+        address: spot.vicinity || "",
+        rating: rating,
+        reviews: reviews,
+        distanceKm: Number(directDistanceKm.toFixed(1)),
+        time: time,
+        highway: highway,
+        placeId: spot.place_id,
+        mapUrl: mapUrl,
+        photoUrl: photoUrl,
+        catchCopy: catchCopy
+    });
+
+    box.dataset.mapUrl = mapUrl;
+    box.dataset.shareText = shareText;
+
+    box.innerHTML = `
 <div class="genre">
 <img src="../image/green_dog.png" class="genre-dog">
 🌿 自然</div>
@@ -545,7 +584,7 @@ ${photoUrl ? `
 📍 ${spot.vicinity || ""}<br>
 ⭐ ${rating} (${reviews}件)<br>
 🏷 ${typeLabel}<br>
-⏱ 約${distance.toFixed(1)}km / ${time}分以内<br><br>
+⏱ 約${directDistanceKm.toFixed(1)}km / ${time}分以内<br><br>
 
 <div class="result-actions">
 <a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
@@ -558,9 +597,12 @@ ${photoUrl ? `
 </div>
 `;
 
-            if (callback) callback();
-        }
-    );
+    const bounds = new google.maps.LatLngBounds();
+    if (startMarker && startMarker.getPosition) bounds.extend(startMarker.getPosition());
+    spotMarkers.forEach(m => {
+        if (m && m.getPosition) bounds.extend(m.getPosition());
+    });
+    map.fitBounds(bounds);
 }
 
 // ===============================
