@@ -20,6 +20,11 @@ const EXCLUDE_DISTANCE_KM = 3;
 let loadingTimer = null;
 let completedSpotResults = 0;
 
+// API使用回数を抑えるための調整
+const MAX_POINT_ATTEMPTS = 8;
+const SEARCH_RADIUS_MIN = 5000;
+const SEARCH_RETRY_LIMIT = 1;
+
 // ===============================
 // Google Map 初期表示
 // ===============================
@@ -34,7 +39,6 @@ window.initMap = function () {
 // 検索開始
 // ===============================
 function searchSpot() {
-
     const startAddress = document.getElementById("startLocation").value;
     startAddressGlobal = startAddress;
 
@@ -52,7 +56,6 @@ function searchSpot() {
     const geocoder = new google.maps.Geocoder();
 
     geocoder.geocode({ address: startAddress }, function (results, status) {
-
         if (status !== "OK" || !results[0]) {
             hideLoadingState();
             alert("出発地を取得できませんでした");
@@ -78,9 +81,7 @@ function searchSpot() {
         });
 
         const maxDistance = maxDistanceByTime(time, highway);
-
         findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway);
-
     });
 }
 
@@ -88,7 +89,6 @@ function searchSpot() {
 // 結果クリア
 // ===============================
 function clearResults() {
-
     const resultsBox = document.getElementById("results");
 
     if (resultsBox) {
@@ -112,43 +112,56 @@ function clearResults() {
 
     spotMarkers.forEach(m => m.setMap(null));
     spotMarkers = [];
+
+    const rerollButton = document.getElementById("rerollButton");
+    if (rerollButton) {
+        rerollButton.classList.add("hidden");
+    }
 }
 
 // ===============================
-function createRandomPoint(lat, lng, maxDistanceKm) {
+// ランダム座標生成（ドーナツ型）
+// ===============================
+function createRandomPoint(lat, lng, minDistanceKm, maxDistanceKm) {
+    const safeMin = Math.max(0, minDistanceKm || 0);
+    const safeMax = Math.max(safeMin + 0.5, maxDistanceKm || safeMin + 0.5);
 
-    const radiusInDegrees = maxDistanceKm / 111;
+    const minR = safeMin / 111;
+    const maxR = safeMax / 111;
 
     const u = Math.random();
     const v = Math.random();
-    const w = radiusInDegrees * Math.sqrt(u);
+
+    const r = Math.sqrt((maxR * maxR - minR * minR) * u + minR * minR);
     const t = 2 * Math.PI * v;
 
-    const newLat = lat + w * Math.cos(t);
-    const newLng = lng + w * Math.sin(t) / Math.cos(lat * Math.PI / 180);
+    const newLat = lat + r * Math.cos(t);
+    const newLng = lng + r * Math.sin(t) / Math.cos(lat * Math.PI / 180);
+    const distanceKm = r * 111;
 
-    return { lat: newLat, lng: newLng };
+    return { lat: newLat, lng: newLng, distanceKm };
 }
 
 // ===============================
 function maxDistanceByTime(time, highway) {
-
     const hours = time / 60;
-
-    let speed;
-
-    if (highway === "yes") {
-        speed = HIGHWAY_SPEED;
-    } else {
-        speed = LOCAL_SPEED;
-    }
-
+    const speed = highway === "yes" ? HIGHWAY_SPEED : LOCAL_SPEED;
     return hours * speed;
 }
 
 // ===============================
-function calcDistance(lat1, lng1, lat2, lng2) {
+// 最小距離計算（ドーナツ型用）
+// ===============================
+function getMinDistanceByTime(maxDistance, time, highway) {
+    if (time === 30) return 0;
+    if (time === 60) return maxDistance * (highway === "yes" ? 0.40 : 0.30);
+    if (time === 90) return maxDistance * (highway === "yes" ? 0.60 : 0.50);
+    if (time === 120) return maxDistance * (highway === "yes" ? 0.70 : 0.60);
+    return 0;
+}
 
+// ===============================
+function calcDistance(lat1, lng1, lat2, lng2) {
     const R = 6371;
 
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -161,41 +174,36 @@ function calcDistance(lat1, lng1, lat2, lng2) {
         Math.sin(dLng / 2) * Math.sin(dLng / 2);
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
     return R * c;
 }
 
 // ===============================
+// 候補中心点を探す
+// ===============================
 function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt = 0) {
-
-    if (attempt > 15) {
+    if (attempt > MAX_POINT_ATTEMPTS) {
         hideLoadingState();
         alert("海に当たってしまいました、もう一度回してください");
         return;
     }
 
-    const point = createRandomPoint(startLat, startLng, maxDistance);
+    const minDistance = getMinDistanceByTime(maxDistance, time, highway);
+    const point = createRandomPoint(startLat, startLng, minDistance, maxDistance);
 
     geocoder.geocode(
         { location: { lat: point.lat, lng: point.lng } },
         function (results, status) {
-
             if (status === "OK" && results[0]) {
-
                 let prefecture = "";
 
                 for (const comp of results[0].address_components) {
-
                     if (comp.types.includes("administrative_area_level_1")) {
                         prefecture = comp.long_name;
                     }
                 }
 
                 if (prefecture) {
-
-                    const distance = calcDistance(startLat, startLng, point.lat, point.lng);
-
-                    searchThreeGenres(point.lat, point.lng, distance, time, highway);
+                    searchThreeGenres(point.lat, point.lng, point.distanceKm, time, highway);
                     return;
                 }
             }
@@ -258,7 +266,7 @@ function formatSpotTypes(types = [], genreName = "", keyword = "") {
 function buildSpotCatchCopy(spot, genreName, keyword) {
     const rating = Number(spot.rating || 0);
     const reviews = Number(spot.user_ratings_total || 0);
-    const typeLabel = formatSpotTypes(spot.types, genreName, keyword);
+    const typeLabel = formatSpotTypes(spot.types || [], genreName, keyword);
 
     if (genreName.includes("グルメ")) {
         if (rating >= 4.2 && reviews >= 100) {
@@ -295,12 +303,16 @@ function saveSpotHistoryItem(data) {
     const key = "dokoiko_spot_history";
     const current = JSON.parse(localStorage.getItem(key) || "[]");
 
-    current.unshift({
+    const filtered = current.filter(item => {
+        return !(item.placeId === data.placeId && item.genreName === data.genreName);
+    });
+
+    filtered.unshift({
         savedAt: new Date().toISOString(),
         ...data
     });
 
-    const trimmed = current.slice(0, 20);
+    const trimmed = filtered.slice(0, 20);
     localStorage.setItem(key, JSON.stringify(trimmed));
 }
 
@@ -319,7 +331,7 @@ function shareSpotResult(index) {
             title: "どこいこMap",
             text: shareText,
             url: shareUrl
-        }).catch(() => { });
+        }).catch(() => {});
         return;
     }
 
@@ -333,146 +345,132 @@ function shareSpotResult(index) {
 }
 
 // ===============================
-// 3ジャンル検索
+// ジャンル定義
 // ===============================
-function searchThreeGenres(lat, lng, distance, time, highway) {
-
-    completedSpotResults = 0;
-
-    const genreGroups = [
-        { name: "🔭観光スポット⛩", keywords: ["神社", "寺", "展望台", "絶景"], color: "red" },
-        { name: "🍽グルメ🍜", keywords: ["ラーメン", "カフェ", "食堂"], color: "green" },
-        { name: "🌳自然スポット🍃", keywords: ["滝", "峠", "湖", "渓谷", "ダム"], color: "orange" }
+function getSpotGenreGroups() {
+    return [
+        {
+            name: "🔭観光スポット⛩",
+            keywords: ["展望台", "絶景", "道の駅", "神社", "寺", "博物館"],
+            color: "red"
+        },
+        {
+            name: "🍽グルメ🍜",
+            keywords: ["ラーメン", "カフェ", "食堂", "レストラン", "道の駅グルメ"],
+            color: "green"
+        },
+        {
+            name: "🌳自然スポット🍃",
+            keywords: ["滝", "湖", "渓谷", "ダム", "高原", "公園"],
+            color: "orange"
+        }
     ];
-
-    genreGroups.forEach((group, index) => {
-
-        const keyword = group.keywords[Math.floor(Math.random() * group.keywords.length)];
-
-        searchNearbySpotByGenre(
-            lat,
-            lng,
-            distance,
-            time,
-            highway,
-            keyword,
-            group.name,
-            index,
-            group.color
-        );
-    });
-
-    document.getElementById("rerollButton").classList.remove("hidden");
 }
 
 // ===============================
-// ジャンル検索（完成版）
+// 1回検索して3ジャンルを作る
 // ===============================
-function searchNearbySpotByGenre(
-    lat,
-    lng,
-    distance,
-    time,
-    highway,
-    keyword,
-    genreName,
-    index,
-    color,
-    retry = 0
-) {
+function searchThreeGenres(lat, lng, distance, time, highway) {
+    completedSpotResults = 0;
 
+    searchNearbySpotsOnce(lat, lng, distance, time, highway, function (results) {
+        const genreGroups = getSpotGenreGroups();
+
+        if (!results || results.length === 0) {
+            hideLoadingState();
+
+            genreGroups.forEach((group, index) => {
+                const box = document.getElementById(`result${index + 1}`);
+                if (box) {
+                    box.innerHTML = `
+<h3>${group.name}</h3>
+見つかりませんでした
+`;
+                }
+            });
+
+            showResultWithEffect();
+            document.getElementById("rerollButton").classList.remove("hidden");
+            return;
+        }
+
+        const usedPlaceIds = new Set();
+
+        genreGroups.forEach((group, index) => {
+            const picked = pickBestSpotForGenre(results, group, usedPlaceIds, time);
+
+            const box = document.getElementById(`result${index + 1}`);
+
+            if (!picked || !box) {
+                if (box) {
+                    box.innerHTML = `
+<h3>${group.name}</h3>
+見つかりませんでした
+`;
+                }
+                completedSpotResults++;
+                return;
+            }
+
+            usedPlaceIds.add(picked.place_id);
+            renderSpotResultCard(box, picked, group, distance, time, highway, index);
+            completedSpotResults++;
+        });
+
+        hideLoadingState();
+        showResultWithEffect();
+        document.getElementById("rerollButton").classList.remove("hidden");
+    });
+}
+
+// ===============================
+// 1回検索用
+// ===============================
+function searchNearbySpotsOnce(lat, lng, distance, time, highway, callback, retry = 0) {
     const service = new google.maps.places.PlacesService(map);
-    const box = document.getElementById(`result${index + 1}`);
 
-    let type = "tourist_attraction";
-    let searchKeyword = keyword;
-
-    if (genreName.includes("グルメ")) {
-        type = "restaurant";
-    }
-
-    if (genreName.includes("自然")) {
-        type = "park";
-    }
-
-    if (genreName.includes("観光")) {
-        searchKeyword = keyword + " 観光名所 絶景 展望台 道の駅 神社 寺";
-    }
-
-    let radius = Math.max(distance * 1000, 5000);
-
+    let radius = Math.max(distance * 1000, SEARCH_RADIUS_MIN);
     if (retry === 1) radius *= 1.8;
-    if (retry === 2) radius *= 2.5;
+
+    const broadKeywordSets = [
+        "展望台 絶景 道の駅 神社 寺 博物館 ラーメン カフェ 食堂 滝 湖 渓谷 ダム 高原 公園",
+        "観光 グルメ 自然 立ち寄り 景色 ご当地",
+        "観光名所 レストラン 自然公園 景勝地"
+    ];
+
+    const searchKeyword = broadKeywordSets[Math.min(retry, broadKeywordSets.length - 1)];
 
     service.nearbySearch(
         {
             location: { lat: lat, lng: lng },
             radius: radius,
-            keyword: searchKeyword,
-            type: type
+            keyword: searchKeyword
         },
-
         function (results, status) {
-
             if (
                 status !== google.maps.places.PlacesServiceStatus.OK ||
                 !results ||
                 results.length === 0
             ) {
-
-                if (retry < 2) {
-
-                    searchNearbySpotByGenre(
-                        lat,
-                        lng,
-                        distance,
-                        time,
-                        highway,
-                        keyword,
-                        genreName,
-                        index,
-                        color,
-                        retry + 1
-                    );
-
+                if (retry < SEARCH_RETRY_LIMIT) {
+                    searchNearbySpotsOnce(lat, lng, distance, time, highway, callback, retry + 1);
                     return;
                 }
 
-                if (box) {
-                    box.innerHTML = `
-<h3>${genreName}</h3>
-見つかりませんでした
-`;
-                }
-
-                handleSpotResultRendered();
+                callback([]);
                 return;
             }
 
-            let filtered = results.filter(r => (r.rating || 0) >= 4.0);
-
-            if (filtered.length === 0) {
-                filtered = results;
-            }
-
-            filtered = filtered.filter(place => {
+            const filtered = results.filter(place => {
+                if (!place || !place.geometry || !place.geometry.location) return false;
 
                 const plat = place.geometry.location.lat();
                 const plng = place.geometry.location.lng();
 
                 for (let marker of spotMarkers) {
-
                     if (!marker || !marker.getPosition) continue;
-
                     const pos = marker.getPosition();
-
-                    const d = calcDistance(
-                        plat,
-                        plng,
-                        pos.lat(),
-                        pos.lng()
-                    );
-
+                    const d = calcDistance(plat, plng, pos.lat(), pos.lng());
                     if (d < EXCLUDE_DISTANCE_KM) {
                         return false;
                     }
@@ -481,108 +479,147 @@ function searchNearbySpotByGenre(
                 return true;
             });
 
-            if (filtered.length === 0) {
-                filtered = results;
-            }
+            callback(filtered.length > 0 ? filtered : results);
+        }
+    );
+}
 
-            filtered.sort((a, b) =>
-                (b.user_ratings_total || 0) -
-                (a.user_ratings_total || 0)
-            );
+// ===============================
+// ジャンルごとの候補点数計算
+// ===============================
+function getGenreScore(place, group, time) {
+    const name = place.name || "";
+    const vicinity = place.vicinity || "";
+    const types = Array.isArray(place.types) ? place.types.join(" ") : "";
+    const text = `${name} ${vicinity} ${types}`;
+    const rating = Number(place.rating || 0);
+    const reviews = Number(place.user_ratings_total || 0);
 
-            const top = filtered.slice(0, 5);
+    let score = rating * 5 + Math.min(reviews, 300) * 0.05;
 
-            if (top.length === 0) {
+    if (group.name.includes("観光")) {
+        if (/展望台|絶景|景勝地|道の駅|神社|寺|博物館|美術館|観光/i.test(text)) score += 18;
+        if (/shopping_mall|museum|art_gallery|tourist_attraction|shrine|temple/i.test(types)) score += 12;
+        if (/ラーメン|カフェ|食堂|restaurant|cafe/i.test(text)) score -= 10;
+        if (/滝|湖|渓谷|ダム|高原|park|natural_feature/i.test(text)) score -= 4;
+    }
 
-                if (box) {
-                    box.innerHTML = `
-<h3>${genreName}</h3>
-見つかりませんでした
-`;
-                }
+    if (group.name.includes("グルメ")) {
+        if (/ラーメン|カフェ|食堂|レストラン|restaurant|cafe|bakery|meal_takeaway|food/i.test(text)) score += 20;
+        if (/restaurant|cafe|food|bakery/i.test(types)) score += 14;
+        if (/道の駅/i.test(text)) score += 6;
+        if (/神社|寺|展望台|滝|渓谷|湖|ダム/i.test(text)) score -= 8;
+    }
 
-                handleSpotResultRendered();
-                return;
-            }
+    if (group.name.includes("自然")) {
+        if (/滝|湖|渓谷|ダム|高原|公園|自然|山|海|岬|展望台/i.test(text)) score += 18;
+        if (/park|campground|natural_feature|tourist_attraction/i.test(types)) score += 12;
+        if (/restaurant|cafe|食堂|ラーメン/i.test(text)) score -= 10;
+        if (/神社|寺/i.test(text)) score -= 4;
+    }
 
-            const spot = top[Math.floor(Math.random() * top.length)];
+    if (time >= 90 && /展望台|絶景|景勝地|高原|海岸|渓谷|ダム|湖/i.test(text)) {
+        score += 3;
+    }
 
-            const slat = spot.geometry.location.lat();
-            const slng = spot.geometry.location.lng();
+    return score;
+}
 
-            const rating = spot.rating || "評価なし";
-            const reviews = spot.user_ratings_total || 0;
-            const photoUrl = getSpotPhotoUrl(spot);
-            const typeLabel = formatSpotTypes(spot.types, genreName, keyword);
-            const catchCopy = buildSpotCatchCopy(spot, genreName, keyword);
+// ===============================
+// ジャンルごとにベスト候補を選ぶ
+// ===============================
+function pickBestSpotForGenre(results, group, usedPlaceIds, time) {
+    let candidates = results.filter(place => {
+        return place.place_id && !usedPlaceIds.has(place.place_id);
+    });
 
-            const mapUrl =
-                `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
-                `&destination=${encodeURIComponent(spot.name)}` +
-                `&destination_place_id=${spot.place_id}`;
+    if (candidates.length === 0) {
+        return null;
+    }
 
-            const shareText =
-                `${spot.name} を見つけたよ！ ${genreName} / ⭐${rating} #どこいこMap`;
+    candidates.sort((a, b) => {
+        return getGenreScore(b, group, time) - getGenreScore(a, group, time);
+    });
 
-            let dogImage = "image/yellow_dog.png";
+    const top = candidates.slice(0, 6);
+    if (top.length === 0) return null;
 
-            if (genreName.includes("グルメ")) {
-                dogImage = "image/red_dog.png";
-            }
+    return top[Math.floor(Math.random() * Math.min(top.length, 3))] || top[0];
+}
 
-            if (genreName.includes("自然")) {
-                dogImage = "image/green_dog.png";
-            }
+// ===============================
+// 結果カード描画
+// ===============================
+function renderSpotResultCard(box, spot, group, distance, time, highway, index) {
+    const genreName = group.name;
+    const keyword = pickBestKeywordLabel(spot, group);
+    const rating = spot.rating || "評価なし";
+    const reviews = spot.user_ratings_total || 0;
+    const photoUrl = getSpotPhotoUrl(spot);
+    const typeLabel = formatSpotTypes(spot.types || [], genreName, keyword);
+    const catchCopy = buildSpotCatchCopy(spot, genreName, keyword);
 
-            const marker = new google.maps.Marker({
-                position: { lat: slat, lng: slng },
-                map: map,
-                icon: {
-                    url: dogImage,
-                    scaledSize: new google.maps.Size(50, 50)
-                }
-            });
+    const mapUrl =
+        `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
+        `&destination=${encodeURIComponent(spot.name)}` +
+        `&destination_place_id=${spot.place_id}`;
 
-            spotMarkers.push(marker);
+    const shareText =
+        `${spot.name} を見つけたよ！ ${genreName} / ⭐${rating} #どこいこMap`;
 
-            const bounds = new google.maps.LatLngBounds();
+    let dogImage = "image/yellow_dog.png";
+    if (genreName.includes("グルメ")) dogImage = "image/red_dog.png";
+    if (genreName.includes("自然")) dogImage = "image/green_dog.png";
 
-            if (startMarker && startMarker.getPosition) {
-                bounds.extend(startMarker.getPosition());
-            }
+    const slat = spot.geometry.location.lat();
+    const slng = spot.geometry.location.lng();
 
-            spotMarkers.forEach(m => {
+    const marker = new google.maps.Marker({
+        position: { lat: slat, lng: slng },
+        map: map,
+        icon: {
+            url: dogImage,
+            scaledSize: new google.maps.Size(50, 50)
+        }
+    });
 
-                if (m && m.getPosition) {
-                    bounds.extend(m.getPosition());
-                }
+    spotMarkers.push(marker);
 
-            });
+    const bounds = new google.maps.LatLngBounds();
 
-            map.fitBounds(bounds);
+    if (startMarker && startMarker.getPosition) {
+        bounds.extend(startMarker.getPosition());
+    }
 
-            saveSpotHistoryItem({
-                pageType: "spot",
-                genreName: genreName,
-                keyword: keyword,
-                name: spot.name,
-                address: spot.vicinity || "",
-                rating: rating,
-                reviews: reviews,
-                distanceKm: Number(distance.toFixed(1)),
-                time: time,
-                highway: highway,
-                placeId: spot.place_id,
-                mapUrl: mapUrl,
-                photoUrl: photoUrl,
-                catchCopy: catchCopy
-            });
+    spotMarkers.forEach(m => {
+        if (m && m.getPosition) {
+            bounds.extend(m.getPosition());
+        }
+    });
 
-            if (box) {
-                box.dataset.mapUrl = mapUrl;
-                box.dataset.shareText = shareText;
+    map.fitBounds(bounds);
 
-                box.innerHTML = `
+    saveSpotHistoryItem({
+        pageType: "spot",
+        genreName: genreName,
+        keyword: keyword,
+        name: spot.name,
+        address: spot.vicinity || "",
+        rating: rating,
+        reviews: reviews,
+        distanceKm: Number(distance.toFixed(1)),
+        time: time,
+        highway: highway,
+        placeId: spot.place_id,
+        mapUrl: mapUrl,
+        photoUrl: photoUrl,
+        catchCopy: catchCopy
+    });
+
+    box.dataset.mapUrl = mapUrl;
+    box.dataset.shareText = shareText;
+
+    box.innerHTML = `
 <div class="genre">
     <img src="${dogImage}" class="genre-dog">
     ${genreName}
@@ -609,9 +646,9 @@ ${photoUrl ? `
 🚗約${distance.toFixed(1)}km<br>
 
 ⏱ ${time}分 ${time === 30
-                        ? "/ 下道のみ"
-                        : `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
-                    }<br><br>
+            ? "/ 下道のみ"
+            : `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
+        }<br><br>
 
 <div class="result-actions">
     <a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
@@ -623,11 +660,45 @@ ${photoUrl ? `
     </button>
 </div>
 `;
-            }
+}
 
-            handleSpotResultRendered();
-        }
-    );
+// ===============================
+// 表示用キーワード決定
+// ===============================
+function pickBestKeywordLabel(spot, group) {
+    const name = spot.name || "";
+    const vicinity = spot.vicinity || "";
+    const types = Array.isArray(spot.types) ? spot.types.join(" ") : "";
+    const text = `${name} ${vicinity} ${types}`;
+
+    if (group.name.includes("観光")) {
+        if (/道の駅/i.test(text)) return "道の駅";
+        if (/展望台|絶景|景勝地/i.test(text)) return "絶景";
+        if (/神社/i.test(text)) return "神社";
+        if (/寺/i.test(text)) return "寺";
+        if (/博物館|museum/i.test(text)) return "博物館";
+        return "観光";
+    }
+
+    if (group.name.includes("グルメ")) {
+        if (/ラーメン/i.test(text)) return "ラーメン";
+        if (/カフェ|cafe/i.test(text)) return "カフェ";
+        if (/食堂/i.test(text)) return "食堂";
+        if (/restaurant/i.test(text)) return "レストラン";
+        return "グルメ";
+    }
+
+    if (group.name.includes("自然")) {
+        if (/滝/i.test(text)) return "滝";
+        if (/湖|沼/i.test(text)) return "湖";
+        if (/渓谷/i.test(text)) return "渓谷";
+        if (/ダム/i.test(text)) return "ダム";
+        if (/高原/i.test(text)) return "高原";
+        if (/公園|park/i.test(text)) return "公園";
+        return "自然";
+    }
+
+    return "スポット";
 }
 
 // ===============================
@@ -644,7 +715,6 @@ function handleSpotResultRendered() {
 
 // ===============================
 function showResultWithEffect() {
-
     const box = document.getElementById("results");
 
     box.classList.remove("hidden");
@@ -653,21 +723,17 @@ function showResultWithEffect() {
     void box.offsetWidth;
 
     box.classList.add("show");
-
     launchConfetti();
 }
 
 // ===============================
 function launchConfetti() {
-
     const colors = ["#ff7675", "#74b9ff", "#55efc4", "#ffeaa7", "#a29bfe"];
 
     for (let i = 0; i < 40; i++) {
-
         const confetti = document.createElement("div");
 
         confetti.classList.add("confetti");
-
         confetti.style.left = Math.random() * 100 + "vw";
         confetti.style.backgroundColor =
             colors[Math.floor(Math.random() * colors.length)];
@@ -683,7 +749,6 @@ function launchConfetti() {
 }
 
 function rerollSpot() {
-
     if (!startLat || !startLng) {
         alert("先に検索してね！");
         return;
@@ -693,7 +758,6 @@ function rerollSpot() {
     const highway = document.getElementById("highway").value;
 
     const geocoder = new google.maps.Geocoder();
-
     const maxDistance = maxDistanceByTime(time, highway);
 
     clearResults();
@@ -703,14 +767,12 @@ function rerollSpot() {
 }
 
 function getCurrentLocation() {
-
     if (!navigator.geolocation) {
         alert("このブラウザでは位置情報が使えません");
         return;
     }
 
     navigator.geolocation.getCurrentPosition(function (position) {
-
         const lat = position.coords.latitude;
         const lng = position.coords.longitude;
 
@@ -719,55 +781,37 @@ function getCurrentLocation() {
         geocoder.geocode(
             { location: { lat: lat, lng: lng } },
             function (results, status) {
-
                 if (status === "OK" && results[0]) {
-
                     const address = results[0].formatted_address;
-
                     document.getElementById("startLocation").value = address;
-
                 } else {
-
                     alert("住所を取得できませんでした");
                 }
-
             }
         );
-
     }, function () {
         alert("現在地を取得できませんでした");
     });
-
 }
 
 // ===============================
 // 高速制御
 // ===============================
 function updateHighwayControl() {
-
-    const time =
-        document.getElementById("timeSelect").value;
-
-    const highwaySelect =
-        document.getElementById("highway");
+    const time = document.getElementById("timeSelect").value;
+    const highwaySelect = document.getElementById("highway");
 
     if (time === "30") {
-
         highwaySelect.value = "no";
         highwaySelect.disabled = true;
-
     } else {
-
         highwaySelect.disabled = false;
-
     }
 }
 
 // ページ読み込み後にイベント登録
 window.addEventListener("DOMContentLoaded", function () {
-
-    const timeSelect =
-        document.getElementById("timeSelect");
+    const timeSelect = document.getElementById("timeSelect");
 
     timeSelect.addEventListener(
         "change",
@@ -775,7 +819,6 @@ window.addEventListener("DOMContentLoaded", function () {
     );
 
     updateHighwayControl();
-
 });
 
 // ===============================
