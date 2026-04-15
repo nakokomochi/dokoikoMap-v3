@@ -394,23 +394,29 @@ function shareGoodRoadResult(index) {
   window.open(xUrl, "_blank");
 }
 
-// ===============================
-// ランダム座標生成
-// ===============================
-function createRandomPoint(lat, lng, maxDistanceKm, minDistanceKm = 0) {
-  const radiusKm =
-    minDistanceKm + Math.random() * Math.max(maxDistanceKm - minDistanceKm, 0.5);
 
-  const radiusInDegrees = radiusKm / 111;
+// ===============================
+// ランダム座標生成（ドーナツ型）
+// ===============================
+function createRandomPoint(lat, lng, minDistanceKm, maxDistanceKm) {
+  const safeMin = Math.max(0, minDistanceKm || 0);
+  const safeMax = Math.max(safeMin + 0.5, maxDistanceKm || safeMin + 0.5);
+
+  const minR = safeMin / 111;
+  const maxR = safeMax / 111;
+
   const u = Math.random();
   const v = Math.random();
-  const w = radiusInDegrees * Math.sqrt(u);
+
+  const r = Math.sqrt((maxR * maxR - minR * minR) * u + minR * minR);
   const t = 2 * Math.PI * v;
 
-  const newLat = lat + w * Math.cos(t);
-  const newLng = lng + (w * Math.sin(t)) / Math.cos((lat * Math.PI) / 180);
+  const newLat = lat + r * Math.cos(t);
+  const newLng = lng + (r * Math.sin(t)) / Math.cos((lat * Math.PI) / 180);
 
-  return { lat: newLat, lng: newLng, distanceKm: radiusKm };
+  const distanceKm = r * 111;
+
+  return { lat: newLat, lng: newLng, distanceKm };
 }
 
 // ===============================
@@ -420,6 +426,17 @@ function maxDistanceByTime(time, highway) {
   const hours = time / 60;
   const speed = highway === "yes" ? HIGHWAY_SPEED : LOCAL_SPEED;
   return hours * speed;
+}
+
+// ===============================
+// 最小距離計算（ドーナツ型用）
+// ===============================
+function getMinDistanceByTime(maxDistance, time, highway) {
+  if (time === 30) return 0;
+  if (time === 60) return maxDistance * (highway === "yes" ? 0.45 : 0.35);
+  if (time === 90) return maxDistance * (highway === "yes" ? 0.65 : 0.55);
+  if (time === 120) return maxDistance * (highway === "yes" ? 0.75 : 0.65);
+  return 0;
 }
 
 // ===============================
@@ -643,12 +660,18 @@ function findBestGoodRoadPoint(time, highway, callback) {
   let checked = 0;
   let bestCandidate = null;
 
+  const profileMaxDistance = maxDistance * profile.candidateMaxRatio;
+  const minDistance = Math.max(
+    profile.candidateMinDistance,
+    getMinDistanceByTime(profileMaxDistance, time, highway)
+  );
+
   for (let i = 0; i < CANDIDATE_POINT_COUNT; i++) {
     const point = createRandomPoint(
       startLat,
       startLng,
-      maxDistance * profile.candidateMaxRatio,
-      profile.candidateMinDistance
+      minDistance,
+      profileMaxDistance
     );
 
     geocoder.geocode(
@@ -711,11 +734,19 @@ function searchGoodRoadSequentially(index, baseLat, baseLng, baseDistance, time,
   }
 
   const profile = getTimeProfile(time);
+
+  const localMinDistance = Math.max(
+    Math.min(baseDistance * 0.35, baseDistance - 1),
+    Math.max(profile.candidateMinDistance * 0.2, 2)
+  );
+
+  const localMaxDistance = Math.max(baseDistance * 0.85, localMinDistance + 1);
+
   const point = createRandomPoint(
     baseLat,
     baseLng,
-    Math.max(baseDistance * 0.22, 5),
-    Math.max(profile.candidateMinDistance * 0.3, 2)
+    localMinDistance,
+    localMaxDistance
   );
 
   const selectedKey = getSelectedRoadTypeKey();
