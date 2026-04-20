@@ -25,6 +25,10 @@ const MAX_POINT_ATTEMPTS = 8;
 const SEARCH_RADIUS_MIN = 5000;
 const SEARCH_RETRY_LIMIT = 1;
 
+// ルート判定用
+const ROUTE_CHECK_CANDIDATES_PER_GENRE = 4;
+const TIME_TOLERANCE_MINUTES = 20;
+
 // ===============================
 // Google Map 初期表示
 // ===============================
@@ -368,12 +372,128 @@ function getSpotGenreGroups() {
 }
 
 // ===============================
+// 実ルート許容範囲
+// ===============================
+function getRouteTimeRange(time) {
+    const min = Math.max(10, time - TIME_TOLERANCE_MINUTES);
+    const max = time + TIME_TOLERANCE_MINUTES;
+    return { min, max };
+}
+
+// ===============================
+// 実ルート取得
+// ===============================
+function getRouteInfoToSpot(spot, highway) {
+    return new Promise((resolve) => {
+        if (!startLat || !startLng || !spot || !spot.geometry || !spot.geometry.location) {
+            resolve(null);
+            return;
+        }
+
+        const service = new google.maps.DirectionsService();
+
+        service.route(
+            {
+                origin: { lat: startLat, lng: startLng },
+                destination: {
+                    placeId: spot.place_id
+                },
+                travelMode: google.maps.TravelMode.DRIVING,
+                avoidHighways: highway !== "yes",
+                provideRouteAlternatives: false
+            },
+            function (result, status) {
+                if (status !== "OK" || !result || !result.routes || !result.routes[0]) {
+                    resolve(null);
+                    return;
+                }
+
+                const leg = result.routes[0].legs && result.routes[0].legs[0];
+                if (!leg || !leg.duration || !leg.distance) {
+                    resolve(null);
+                    return;
+                }
+
+                const durationMinutes = Math.round(leg.duration.value / 60);
+                const distanceKm = Number((leg.distance.value / 1000).toFixed(1));
+
+                resolve({
+                    durationMinutes,
+                    durationText: leg.duration.text,
+                    distanceKm,
+                    distanceText: leg.distance.text,
+                    routeResult: result
+                });
+            }
+        );
+    });
+}
+
+// ===============================
+// 実ルートで候補を選ぶ
+// ===============================
+async function pickBestSpotForGenreByRoute(results, group, usedPlaceIds, time, highway) {
+    let candidates = results.filter(place => {
+        return place.place_id && !usedPlaceIds.has(place.place_id);
+    });
+
+    if (candidates.length === 0) {
+        return null;
+    }
+
+    candidates.sort((a, b) => {
+        return getGenreScore(b, group, time) - getGenreScore(a, group, time);
+    });
+
+    const topCandidates = candidates.slice(0, ROUTE_CHECK_CANDIDATES_PER_GENRE);
+    const range = getRouteTimeRange(time);
+    const checked = [];
+
+    for (const spot of topCandidates) {
+        const routeInfo = await getRouteInfoToSpot(spot, highway);
+
+        if (!routeInfo) continue;
+
+        const diff = Math.abs(routeInfo.durationMinutes - time);
+
+        checked.push({
+            spot,
+            routeInfo,
+            diff,
+            inRange:
+                routeInfo.durationMinutes >= range.min &&
+                routeInfo.durationMinutes <= range.max
+        });
+    }
+
+    const valid = checked.filter(item => item.inRange);
+
+    if (valid.length > 0) {
+        valid.sort((a, b) => {
+            if (a.diff !== b.diff) return a.diff - b.diff;
+            return getGenreScore(b.spot, group, time) - getGenreScore(a.spot, group, time);
+        });
+        return valid[0];
+    }
+
+    if (checked.length > 0) {
+        checked.sort((a, b) => {
+            if (a.diff !== b.diff) return a.diff - b.diff;
+            return getGenreScore(b.spot, group, time) - getGenreScore(a.spot, group, time);
+        });
+        return checked[0];
+    }
+
+    return null;
+}
+
+// ===============================
 // 1回検索して3ジャンルを作る
 // ===============================
 function searchThreeGenres(lat, lng, distance, time, highway) {
     completedSpotResults = 0;
 
-    searchNearbySpotsOnce(lat, lng, distance, time, highway, function (results) {
+    searchNearbySpotsOnce(lat, lng, distance, time, highway, async function (results) {
         const genreGroups = getSpotGenreGroups();
 
         if (!results || results.length === 0) {
@@ -396,26 +516,36 @@ function searchThreeGenres(lat, lng, distance, time, highway) {
 
         const usedPlaceIds = new Set();
 
-        genreGroups.forEach((group, index) => {
-            const picked = pickBestSpotForGenre(results, group, usedPlaceIds, time);
-
+        for (let index = 0; index < genreGroups.length; index++) {
+            const group = genreGroups[index];
             const box = document.getElementById(`result${index + 1}`);
 
-            if (!picked || !box) {
-                if (box) {
-                    box.innerHTML = `
+            if (!box) continue;
+
+            const pickedData = await pickBestSpotForGenreByRoute(results, group, usedPlaceIds, time, highway);
+
+            if (!pickedData) {
+                box.innerHTML = `
 <h3>${group.name}</h3>
 見つかりませんでした
 `;
-                }
                 completedSpotResults++;
-                return;
+                continue;
             }
 
-            usedPlaceIds.add(picked.place_id);
-            renderSpotResultCard(box, picked, group, distance, time, highway, index);
+            usedPlaceIds.add(pickedData.spot.place_id);
+            renderSpotResultCard(
+                box,
+                pickedData.spot,
+                group,
+                distance,
+                time,
+                highway,
+                index,
+                pickedData.routeInfo
+            );
             completedSpotResults++;
-        });
+        }
 
         hideLoadingState();
         showResultWithEffect();
@@ -526,7 +656,7 @@ function getGenreScore(place, group, time) {
 }
 
 // ===============================
-// ジャンルごとにベスト候補を選ぶ
+// ジャンルごとにベスト候補を選ぶ（旧構造維持用）
 // ===============================
 function pickBestSpotForGenre(results, group, usedPlaceIds, time) {
     let candidates = results.filter(place => {
@@ -548,9 +678,27 @@ function pickBestSpotForGenre(results, group, usedPlaceIds, time) {
 }
 
 // ===============================
+// GoogleマップURL生成
+// ===============================
+function buildGoogleMapsUrl(spot, highway) {
+    let url =
+        `https://www.google.com/maps/dir/?api=1` +
+        `&origin=${encodeURIComponent(startAddressGlobal)}` +
+        `&destination=${encodeURIComponent(spot.name)}` +
+        `&destination_place_id=${spot.place_id}` +
+        `&travelmode=driving`;
+
+    if (highway !== "yes") {
+        url += `&avoid=highways`;
+    }
+
+    return url;
+}
+
+// ===============================
 // 結果カード描画
 // ===============================
-function renderSpotResultCard(box, spot, group, distance, time, highway, index) {
+function renderSpotResultCard(box, spot, group, distance, time, highway, index, routeInfo = null) {
     const genreName = group.name;
     const keyword = pickBestKeywordLabel(spot, group);
     const rating = spot.rating || "評価なし";
@@ -559,10 +707,7 @@ function renderSpotResultCard(box, spot, group, distance, time, highway, index) 
     const typeLabel = formatSpotTypes(spot.types || [], genreName, keyword);
     const catchCopy = buildSpotCatchCopy(spot, genreName, keyword);
 
-    const mapUrl =
-        `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
-        `&destination=${encodeURIComponent(spot.name)}` +
-        `&destination_place_id=${spot.place_id}`;
+    const mapUrl = buildGoogleMapsUrl(spot, highway);
 
     const shareText =
         `${spot.name} を見つけたよ！ ${genreName} / ⭐${rating} #どこいこMap`;
@@ -599,6 +744,10 @@ function renderSpotResultCard(box, spot, group, distance, time, highway, index) 
 
     map.fitBounds(bounds);
 
+    const displayDistanceKm = routeInfo ? routeInfo.distanceKm : Number(distance.toFixed(1));
+    const displayDistanceText = routeInfo ? routeInfo.distanceText : `約${distance.toFixed(1)}km`;
+    const displayDurationText = routeInfo ? routeInfo.durationText : `${time}分`;
+
     saveSpotHistoryItem({
         pageType: "spot",
         genreName: genreName,
@@ -607,7 +756,9 @@ function renderSpotResultCard(box, spot, group, distance, time, highway, index) 
         address: spot.vicinity || "",
         rating: rating,
         reviews: reviews,
-        distanceKm: Number(distance.toFixed(1)),
+        distanceKm: displayDistanceKm,
+        distanceText: displayDistanceText,
+        durationText: displayDurationText,
         time: time,
         highway: highway,
         placeId: spot.place_id,
@@ -643,12 +794,11 @@ ${photoUrl ? `
 
 🎯ジャンル：${keyword}<br><br>
 
-🚗約${distance.toFixed(1)}km<br>
+🚗 ${displayDistanceText}<br>
 
-⏱ ${time}分 ${time === 30
-            ? "/ 下道のみ"
-            : `/ 🛣 ${highway === "yes" ? "高速あり" : "下道のみ"}`
-        }<br><br>
+⏱ ${displayDurationText}<br>
+
+🛣 ${time === 30 ? "下道のみ" : (highway === "yes" ? "高速あり" : "下道のみ")}<br><br>
 
 <div class="result-actions">
     <a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
