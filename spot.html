@@ -14,14 +14,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>ツーリング・ドライブの行き先をランダム提案｜どこいこMap スポット版</title>
-    <meta name="description" content="出発地と移動時間から、ツーリングやドライブにぴったりなスポットをランダムで3件提案。次の目的地探しに使えるどこいこMapのスポット版です。">
+    <title>ツーリング・ドライブの目的地をランダム提案｜おすすめスポット3件【どこいこMap】</title>
+    <meta name="description"
+        content="出発地と移動時間から、ツーリングやドライブの目的地におすすめのスポットをランダムで3件提案。行き先が決まらないときの目的地探しに使える、どこいこMapのスポット版です。">
 
     <meta name="robots" content="index, follow">
     <meta name="format-detection" content="telephone=no">
 
-    <meta property="og:title" content="ツーリング・ドライブのスポットをランダム提案｜どこいこMap スポット版">
-    <meta property="og:description" content="出発地と移動時間から、ツーリングやドライブにぴったりなおでかけスポットをランダムで3件提案します。">
+    <meta property="og:title" content="ツーリング・ドライブの目的地をランダム提案｜どこいこMap スポット版">
+    <meta property="og:description" content="出発地と移動時間から、ツーリングやドライブにおすすめのスポットをランダムで3件提案。行き先が決まらないときの目的地探しに使えます。">
     <meta property="og:image" content="https://www.dokoiko-map.com/image/dog.png">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.dokoiko-map.com/spot.html">
@@ -29,8 +30,8 @@
     <meta property="og:locale" content="ja_JP">
 
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="ツーリング・ドライブのスポットをランダム提案｜どこいこMap スポット版">
-    <meta name="twitter:description" content="出発地と移動時間から、おでかけスポットをランダムで3件提案します。">
+    <meta name="twitter:title" content="ツーリング・ドライブの目的地をランダム提案｜どこいこMap スポット版">
+    <meta name="twitter:description" content="出発地と移動時間から、おすすめスポットをランダムで3件提案。行き先が決まらないときの目的地探しに。">
     <meta name="twitter:image" content="https://www.dokoiko-map.com/image/dog.png">
 
     <link rel="canonical" href="https://www.dokoiko-map.com/spot.html">
@@ -48,8 +49,12 @@
 
             <h1 class="TitleName">
                 どこいこMap
-                <span class="subTitle">スポット版</span>
+                <span class="subTitle">スポット版<br>目的地をランダム提案</span>
             </h1>
+
+            <p class="page-lead">
+                ツーリングやドライブの行き先に迷ったら、出発地と移動時間からおすすめスポットをランダムで3件提案します。
+            </p>
         </header>
 
         <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
@@ -92,13 +97,6 @@
             <button onclick="location.href='theme.html'">テーマ</button>
         </nav>
 
-        <p class="site-description">
-            行き先に迷ったら、ワンクリック。<br><br>
-
-            ツーリング・ドライブにぴったりな<br>
-            スポットをランダムで3件提案します。
-        </p>
-
         <section class="panel-top">
 
             <label for="startLocation">出発地の住所：</label><br>
@@ -119,6 +117,8 @@
                 <option value="60">1時間</option>
                 <option value="90">1時間30分</option>
                 <option value="120">2時間</option>
+                <option value="150">2時間30分</option>
+                <option value="180">3時間</option>
             </select>
 
             <br>
