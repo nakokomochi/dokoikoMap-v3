@@ -9,7 +9,7 @@ body {
 
 /* メインコンテナ */
 .about-container {
-  max-width: 800px;
+  max-width: 1300px;
   margin: 60px auto;
   padding: 25px;
   background: rgba(255, 255, 255, 0.96);
@@ -56,6 +56,37 @@ body {
   margin-bottom: 8px;
   color: #444;
   line-height: 1.7;
+}
+
+/* 更新履歴 */
+.update-history {
+  margin-top: 30px;
+  padding: 20px;
+  background: linear-gradient(180deg, #fffaf6 0%, #fff4eb 100%);
+  border: 1px solid rgba(255, 106, 0, 0.18);
+  border-radius: 14px;
+}
+
+.update-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.update-list li {
+  margin-bottom: 12px;
+  color: #444;
+  line-height: 1.8;
+}
+
+.update-list li:last-child {
+  margin-bottom: 0;
+}
+
+.update-date {
+  display: inline-block;
+  font-weight: bold;
+  color: #ff6a00;
+  margin-right: 8px;
 }
 
 /* ボタン */
@@ -330,6 +361,27 @@ body {
   .problem-list li {
     font-size: 15px;
     margin-bottom: 10px;
+  }
+
+  .update-history {
+    margin-top: 24px;
+    padding: 16px 14px;
+    border-radius: 12px;
+  }
+
+  .update-list {
+    padding-left: 18px;
+  }
+
+  .update-list li {
+    font-size: 15px;
+    margin-bottom: 10px;
+    line-height: 1.75;
+  }
+
+  .update-date {
+    display: inline;
+    margin-right: 6px;
   }
 
   .site-icon {
