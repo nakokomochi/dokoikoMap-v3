@@ -804,7 +804,7 @@ ${photoUrl ? `
 🛣 ${time === 30 ? "下道のみ" : (highway === "yes" ? "高速あり" : "下道のみ")}<br><br>
 
 <div class="result-actions">
-<a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
+<button type="button" a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
 🧭 Googleマップでナビ
 </a>
 
