@@ -15,51 +15,44 @@ const TOKYO_STATION_POSITION = {
   gestureHandling: "greedy"
 };
 
+const IMAGE_BASE_PATH = "../image";
 const EXCLUDE_DISTANCE_KM = 1.2;
+const CANDIDATE_POINT_COUNT = 4;
+const SEARCH_RADIUS_MIN = 5000;
+const SEARCH_RETRY_LIMIT = 1;
+
 let usedPlaceIds = new Set();
-const CANDIDATE_POINT_COUNT = 12;
 
 // ===============================
-// 検索タイプ定義
+// 道タイプ
 // ===============================
 const ROAD_TYPES = [
   {
     key: "relaxed",
     label: "🌿 のんびり道",
-    iconEmoji: "🌿",
-    keywords: "農道 田園 郊外 ドライブ ロード 景色 川 湖 公園 一本道 広域農道",
-    regex: /農道|田園|郊外|広域農道|ロード|景色|川|湖|公園|一本道|田舎/i
-  },
-  {
-    key: "scenic",
-    label: "🌅 景色道",
-    iconEmoji: "🌅",
-    keywords: "海沿い 海岸 展望台 パノラマ 高原 スカイライン 景色 風景 岬 湖",
-    regex: /海沿い|海岸|展望台|パノラマ|高原|スカイライン|景色|風景|岬|湖|展望/i
+    keywords: "道の駅 公園 湖 ダム 高原 牧場 展望台 郊外 景色 自然"
   },
   {
     key: "mild_curve",
     label: "🏍 緩いカーブ道",
-    iconEmoji: "🏍",
-    keywords: "峠 山道 スカイライン 高原 ワインディング 展望台 ドライブ ロード",
-    regex: /峠|山道|スカイライン|高原|ワインディング|展望台|ライン|ロード/i
+    keywords: "峠 高原 ダム 渓谷 スカイライン 展望台 山道 景色"
+  },
+  {
+    key: "scenic",
+    label: "🌅 景色道",
+    keywords: "展望台 絶景 景勝地 高原 湖 ダム 海 岬 道の駅"
   }
 ];
-
-const COMMON_FALLBACK_KEYWORDS =
-  "ドライブ ロード 景色 展望 公園 高原 海 湖 農道 郊外 山道 スカイライン 一本道 道の駅 パノラマ";
 
 // ===============================
 // Google Map 初期表示
 // ===============================
-function initMap() {
-  ensureLoadingStyle();
-
+window.initMap = function () {
   map = new google.maps.Map(
     document.getElementById("map"),
     TOKYO_STATION_POSITION
   );
-}
+};
 
 // ===============================
 // 検索開始
@@ -75,9 +68,10 @@ function searchGoodRoad() {
 
   const time = Number(document.getElementById("timeSelect").value);
   const highway = document.getElementById("highway").value;
+  const roadType = getSelectedRoadType();
 
   clearResults();
-  showLoadingState();
+  showLoadingState("検索中...", "わんこが気持ちよく走れそうな道を探してるよ");
 
   const geocoder = new google.maps.Geocoder();
 
@@ -105,22 +99,18 @@ function searchGoodRoad() {
       icon: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png"
     });
 
-    findBestGoodRoadPoint(time, highway, function (bestPoint) {
-      if (!bestPoint) {
-        hideLoadingState();
-        alert("候補を見つけにくかったので、もう一度試してみてね！");
-        return;
-      }
+    const maxDistance = maxDistanceByTime(time, highway);
 
-      searchThreeGoodRoad(
-        bestPoint.lat,
-        bestPoint.lng,
-        bestPoint.distanceKm,
-        time,
-        highway
-      );
-    });
+    findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, roadType);
   });
+}
+
+// ===============================
+// 選択中の道タイプ取得
+// ===============================
+function getSelectedRoadType() {
+  const key = document.getElementById("roadType")?.value || "relaxed";
+  return ROAD_TYPES.find(type => type.key === key) || ROAD_TYPES[0];
 }
 
 // ===============================
@@ -128,13 +118,22 @@ function searchGoodRoad() {
 // ===============================
 function clearResults() {
   const resultsBox = document.getElementById("results");
+  if (!resultsBox) return;
+
   resultsBox.classList.remove("show");
+  resultsBox.classList.remove("loading");
+  resultsBox.classList.add("hidden");
 
   resultsBox.innerHTML = `
-    <div id="result1" class="result-item"></div>
-    <div id="result2" class="result-item"></div>
-    <div id="result3" class="result-item"></div>
-  `;
+<div id="result1" class="result-item"></div>
+<div id="result2" class="result-item"></div>
+<div id="result3" class="result-item"></div>
+`;
+
+  if (loadingTimer) {
+    clearInterval(loadingTimer);
+    loadingTimer = null;
+  }
 
   spotMarkers.forEach(marker => marker.setMap(null));
   spotMarkers = [];
@@ -147,131 +146,434 @@ function clearResults() {
 }
 
 // ===============================
-// ローディング表示
+// 最大距離計算
 // ===============================
-function ensureLoadingStyle() {
-  if (document.getElementById("goodroad-loading-style")) return;
-
-  const style = document.createElement("style");
-  style.id = "goodroad-loading-style";
-  style.textContent = `
-    .loading-box {
-      text-align: center;
-      padding: 24px 16px;
-      border-radius: 16px;
-      background: rgba(228, 249, 251, 0.75);
-      margin-top: 16px;
-    }
-
-    .loading-dog {
-      font-size: 42px;
-      display: inline-block;
-      animation: dogBounce 0.9s ease-in-out infinite;
-      margin-bottom: 10px;
-    }
-
-    .loading-text {
-      font-weight: bold;
-      font-size: 18px;
-      margin-bottom: 8px;
-      color: #19a7b8;
-    }
-
-    .loading-subtext {
-      font-size: 13px;
-      opacity: 0.9;
-      color: #226b74;
-    }
-
-    .fallback-note {
-      margin: 8px 0 12px;
-      font-size: 0.85rem;
-      line-height: 1.5;
-      color: #3b7981;
-    }
-
-    .spot-photo-wrap {
-      margin: 12px 0;
-      border-radius: 16px;
-      overflow: hidden;
-    }
-
-    .spot-photo {
-      display: block;
-      width: 100%;
-      height: auto;
-      aspect-ratio: 16 / 10;
-      object-fit: cover;
-    }
-
-    .spot-copy {
-      margin: 10px 0 14px;
-      line-height: 1.6;
-      font-size: 0.95rem;
-    }
-
-    .result-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .share-button {
-      border: none;
-      border-radius: 999px;
-      padding: 10px 14px;
-      font-size: 0.95rem;
-      cursor: pointer;
-    }
-
-    @keyframes dogBounce {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-10px); }
-    }
-  `;
-  document.head.appendChild(style);
+function maxDistanceByTime(time, highway) {
+  if (time <= 30) return 10;
+  if (time <= 60) return highway === "yes" ? 30 : 25;
+  if (time <= 90) return highway === "yes" ? 50 : 48;
+  if (time <= 120) return highway === "yes" ? 55 : 50;
+  if (time <= 150) return highway === "yes" ? 65 : 60;
+  if (time <= 180) return highway === "yes" ? 75 : 65;
+  return highway === "yes" ? 120 : 85;
 }
 
-function showLoadingState() {
-  const resultsBox = document.getElementById("results");
-  resultsBox.classList.add("show");
-  resultsBox.innerHTML = `
-    <div class="loading-box">
-      <div class="loading-dog">
-        <img src="../image/dog.png" alt="検索中" class="loading-dog-image">
-      </div>
-      <div class="loading-text" id="loadingText">検索中...</div>
-      <div class="loading-subtext">気持ちよく走れそうな道を探してるよ</div>
-    </div>
-  `;
-
-  const texts = ["検索中...", "検索中 .", "検索中 ..", "検索中 ..."];
-  let i = 0;
-
-  if (loadingTimer) {
-    clearInterval(loadingTimer);
-  }
-
-  loadingTimer = setInterval(() => {
-    const el = document.getElementById("loadingText");
-    if (!el) return;
-    el.textContent = texts[i % texts.length];
-    i++;
-  }, 350);
+// ===============================
+// 最小距離計算
+// ===============================
+function getMinDistanceByTime(maxDistance, time, highway) {
+  if (time === 30) return 0;
+  if (time === 60) return maxDistance * (highway === "yes" ? 0.30 : 0.25);
+  if (time === 90) return maxDistance * (highway === "yes" ? 0.45 : 0.40);
+  if (time === 120) return maxDistance * (highway === "yes" ? 0.55 : 0.50);
+  if (time === 150) return maxDistance * (highway === "yes" ? 0.65 : 0.60);
+  if (time === 180) return maxDistance * (highway === "yes" ? 0.75 : 0.65);
+  return 0;
 }
 
-function hideLoadingState() {
-  if (loadingTimer) {
-    clearInterval(loadingTimer);
-    loadingTimer = null;
+// ===============================
+// ランダム座標生成
+// ===============================
+function createDirectionalPoint(lat, lng, minDistanceKm, maxDistanceKm) {
+  const safeMin = Math.max(0, minDistanceKm || 0);
+  const safeMax = Math.max(safeMin + 0.5, maxDistanceKm || safeMin + 0.5);
+
+  const targetDistanceKm = safeMin + Math.random() * (safeMax - safeMin);
+
+  const baseAngles = [
+    0,
+    Math.PI / 2,
+    Math.PI,
+    Math.PI * 1.5
+  ];
+
+  const baseAngle = baseAngles[Math.floor(Math.random() * baseAngles.length)];
+  const randomOffset = (Math.random() - 0.5) * (Math.PI / 180) * 50;
+  const angle = baseAngle + randomOffset;
+
+  const distanceInDegrees = targetDistanceKm / 111;
+
+  const newLat = lat + distanceInDegrees * Math.cos(angle);
+  const newLng = lng + distanceInDegrees * Math.sin(angle) / Math.cos(lat * Math.PI / 180);
+
+  return {
+    lat: newLat,
+    lng: newLng,
+    distanceKm: targetDistanceKm
+  };
+}
+
+// ===============================
+// 距離計算
+// ===============================
+function calcDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// ===============================
+// 候補中心点を探す
+// ===============================
+function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, roadType, attempt = 0) {
+  if (attempt > CANDIDATE_POINT_COUNT) {
+    hideLoadingState();
+    alert("候補地を見つけられませんでした。もう一度まわしてみてね！");
+    return;
   }
 
-  const resultsBox = document.getElementById("results");
-  resultsBox.innerHTML = `
-    <div id="result1" class="result-item"></div>
-    <div id="result2" class="result-item"></div>
-    <div id="result3" class="result-item"></div>
-  `;
+  const minDistance = getMinDistanceByTime(maxDistance, time, highway);
+  const point = createDirectionalPoint(startLat, startLng, minDistance, maxDistance);
+
+  geocoder.geocode(
+    { location: { lat: point.lat, lng: point.lng } },
+    function (results, status) {
+      if (status === "OK" && results[0]) {
+        let prefecture = "";
+
+        for (const comp of results[0].address_components) {
+          if (comp.types.includes("administrative_area_level_1")) {
+            prefecture = comp.long_name;
+          }
+        }
+
+        if (prefecture) {
+          searchThreeGoodRoad(point.lat, point.lng, point.distanceKm, time, highway, roadType);
+          return;
+        }
+      }
+
+      findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, roadType, attempt + 1);
+    }
+  );
+}
+
+// ===============================
+// 1回検索して3件作る
+// ===============================
+async function searchThreeGoodRoad(lat, lng, distance, time, highway, roadType) {
+  searchNearbyGoodRoadOnce(lat, lng, distance, time, highway, roadType, async function (results) {
+    if (!results || results.length === 0) {
+      hideLoadingState();
+
+      for (let i = 0; i < 3; i++) {
+        const box = document.getElementById(`result${i + 1}`);
+        if (box) {
+          box.innerHTML = `
+<div class="genre">
+<img src="${IMAGE_BASE_PATH}/red_dog.png" class="genre-dog">
+${roadType.label}
+</div>
+候補を見つけにくかったので、もう一度まわしてみてね
+`;
+        }
+      }
+
+      showResultWithEffect();
+
+      const rerollButton = document.getElementById("rerollButton");
+      if (rerollButton) rerollButton.classList.remove("hidden");
+
+      return;
+    }
+
+    const maxDistance = maxDistanceByTime(time, highway);
+
+    for (let index = 0; index < 3; index++) {
+      const box = document.getElementById(`result${index + 1}`);
+      if (!box) continue;
+
+      const spot = pickBestGoodRoadSmart(results, roadType, time, maxDistance);
+
+      if (!spot) {
+        box.innerHTML = `
+<div class="genre">
+<img src="${IMAGE_BASE_PATH}/red_dog.png" class="genre-dog">
+${roadType.label}
+</div>
+見つかりませんでした
+`;
+        continue;
+      }
+
+      usedPlaceIds.add(spot.place_id);
+
+      const routeInfo = await getRouteInfoToSpot(spot, highway);
+
+      renderGoodRoadResultCard(
+        box,
+        spot,
+        distance,
+        time,
+        highway,
+        roadType,
+        index,
+        routeInfo
+      );
+    }
+
+    hideLoadingState();
+    showResultWithEffect();
+
+    const rerollButton = document.getElementById("rerollButton");
+    if (rerollButton) rerollButton.classList.remove("hidden");
+  });
+}
+
+// ===============================
+// Places API検索：基本1回
+// ===============================
+function searchNearbyGoodRoadOnce(lat, lng, distance, time, highway, roadType, callback, retry = 0) {
+  const service = new google.maps.places.PlacesService(map);
+
+  let radius = Math.max(distance * 1000, SEARCH_RADIUS_MIN);
+  if (retry === 1) radius *= 1.8;
+
+  const fallbackKeyword = "道の駅 公園 展望台 景色 高原 湖 ダム 海 自然 ドライブ";
+  const searchKeyword = retry === 0 ? roadType.keywords : fallbackKeyword;
+
+  service.nearbySearch(
+    {
+      location: { lat: lat, lng: lng },
+      radius: radius,
+      keyword: searchKeyword
+    },
+    function (results, status) {
+      if (
+        status !== google.maps.places.PlacesServiceStatus.OK ||
+        !results ||
+        results.length === 0
+      ) {
+        if (retry < SEARCH_RETRY_LIMIT) {
+          searchNearbyGoodRoadOnce(lat, lng, distance, time, highway, roadType, callback, retry + 1);
+          return;
+        }
+
+        callback([]);
+        return;
+      }
+
+      const filtered = results.filter(place => {
+        if (!place || !place.place_id) return false;
+        if (!place.geometry || !place.geometry.location) return false;
+        if (usedPlaceIds.has(place.place_id)) return false;
+        if (isExcludedGoodRoad(place)) return false;
+        return true;
+      });
+
+      callback(filtered.length > 0 ? filtered : results);
+    }
+  );
+}
+
+// ===============================
+// 候補をスコアで選ぶ
+// ===============================
+function pickBestGoodRoadSmart(results, roadType, time, maxDistance) {
+  let candidates = results.filter(place => {
+    if (!place || !place.place_id) return false;
+    if (usedPlaceIds.has(place.place_id)) return false;
+    if (!place.geometry || !place.geometry.location) return false;
+    if (isExcludedGoodRoad(place)) return false;
+    return true;
+  });
+
+  if (candidates.length === 0) return null;
+
+  candidates = candidates.filter(place => {
+    const plat = place.geometry.location.lat();
+    const plng = place.geometry.location.lng();
+
+    const tooClose = spotMarkers.some(marker => {
+      if (!marker || !marker.getPosition) return false;
+      const pos = marker.getPosition();
+      return calcDistance(plat, plng, pos.lat(), pos.lng()) < EXCLUDE_DISTANCE_KM;
+    });
+
+    return !tooClose;
+  });
+
+  if (candidates.length === 0) {
+    candidates = results.filter(place => {
+      return place.place_id && !usedPlaceIds.has(place.place_id) && !isExcludedGoodRoad(place);
+    });
+  }
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => {
+    const aDistance = calcDistance(
+      startLat,
+      startLng,
+      a.geometry.location.lat(),
+      a.geometry.location.lng()
+    );
+
+    const bDistance = calcDistance(
+      startLat,
+      startLng,
+      b.geometry.location.lat(),
+      b.geometry.location.lng()
+    );
+
+    const aScore =
+      getGoodRoadScore(a, roadType) +
+      getDistanceScore(aDistance, maxDistance, time) +
+      Number(a.rating || 0) * 5 +
+      Math.min(Number(a.user_ratings_total || 0), 300) * 0.05;
+
+    const bScore =
+      getGoodRoadScore(b, roadType) +
+      getDistanceScore(bDistance, maxDistance, time) +
+      Number(b.rating || 0) * 5 +
+      Math.min(Number(b.user_ratings_total || 0), 300) * 0.05;
+
+    return bScore - aScore;
+  });
+
+  const top = candidates.slice(0, 6);
+  return top[Math.floor(Math.random() * Math.min(top.length, 3))] || top[0];
+}
+
+// ===============================
+// goodRoadスコア
+// ===============================
+function getGoodRoadScore(place, roadType) {
+  const name = place?.name || "";
+  const vicinity = place?.vicinity || "";
+  const types = Array.isArray(place?.types) ? place.types.join(" ") : "";
+  const text = `${name} ${vicinity} ${types}`;
+
+  let score = 0;
+
+  if (/道の駅/i.test(text)) score += 28;
+  if (/展望台|絶景|景勝地/i.test(text)) score += 28;
+  if (/高原|スカイライン|ライン/i.test(text)) score += 30;
+  if (/湖|ダム|海|岬|海岸/i.test(text)) score += 24;
+  if (/公園|自然公園/i.test(text)) score += 14;
+  if (/滝|渓谷|峡/i.test(text)) score += 18;
+  if (/峠|山道|林道/i.test(text)) score += 22;
+
+  if (/tourist_attraction|park|natural_feature|point_of_interest/i.test(types)) {
+    score += 10;
+  }
+
+  if (roadType.key === "relaxed") {
+    if (/道の駅|公園|湖|ダム|海|牧場|高原|郊外/i.test(text)) score += 22;
+    if (/峠|林道|険道|酷道/i.test(text)) score -= 16;
+  }
+
+  if (roadType.key === "mild_curve") {
+    if (/峠|山道|高原|スカイライン|ライン|渓谷|ダム/i.test(text)) score += 24;
+    if (/駅前|商業施設|ショッピング/i.test(text)) score -= 8;
+  }
+
+  if (roadType.key === "scenic") {
+    if (/展望台|絶景|景勝地|高原|湖|海|岬|海岸|ダム|滝/i.test(text)) score += 26;
+    if (/ビル|駅前|商業施設/i.test(text)) score -= 12;
+  }
+
+  if (/オフィス|ビル|企業|学校|大学|病院|センター|会館|ホール/i.test(text)) score -= 25;
+  if (/レストラン|カフェ|食堂|ラーメン|居酒屋/i.test(text)) score -= 8;
+  if (/ホテル|旅館/i.test(text)) score -= 8;
+
+  return score;
+}
+
+// ===============================
+// 除外
+// ===============================
+function isExcludedGoodRoad(place) {
+  const name = place?.name || "";
+  const vicinity = place?.vicinity || "";
+  const types = Array.isArray(place?.types) ? place.types.join(" ") : "";
+  const text = `${name} ${vicinity} ${types}`;
+
+  if (/ラブホテル|ホテル街|居酒屋|バー/i.test(text)) return true;
+  if (/night_club/i.test(types)) return true;
+
+  return false;
+}
+
+// ===============================
+// 距離スコア
+// ===============================
+function getDistanceScore(straightDistance, maxDistance, time) {
+  const ratio = straightDistance / maxDistance;
+
+  let idealMin = 0.4;
+  let idealMax = 0.8;
+
+  if (time >= 90) {
+    idealMin = 0.55;
+    idealMax = 0.9;
+  }
+
+  if (time >= 120) {
+    idealMin = 0.65;
+    idealMax = 0.95;
+  }
+
+  let score = 0;
+
+  if (ratio >= idealMin && ratio <= idealMax) score += 30;
+  if (ratio < idealMin) score -= 20;
+  if (ratio > idealMax) score -= 30;
+
+  return score;
+}
+
+// ===============================
+// 実ルート取得：選ばれた結果だけ
+// ===============================
+function getRouteInfoToSpot(spot, highway) {
+  return new Promise((resolve) => {
+    if (!startLat || !startLng || !spot || !spot.geometry || !spot.geometry.location) {
+      resolve(null);
+      return;
+    }
+
+    const service = new google.maps.DirectionsService();
+
+    service.route(
+      {
+        origin: { lat: startLat, lng: startLng },
+        destination: { placeId: spot.place_id },
+        travelMode: google.maps.TravelMode.DRIVING,
+        avoidHighways: highway !== "yes",
+        provideRouteAlternatives: false
+      },
+      function (result, status) {
+        if (status !== "OK" || !result || !result.routes || !result.routes[0]) {
+          resolve(null);
+          return;
+        }
+
+        const leg = result.routes[0].legs && result.routes[0].legs[0];
+
+        if (!leg || !leg.duration || !leg.distance) {
+          resolve(null);
+          return;
+        }
+
+        resolve({
+          durationMinutes: Math.round(leg.duration.value / 60),
+          durationText: leg.duration.text,
+          distanceKm: Number((leg.distance.value / 1000).toFixed(1)),
+          distanceText: leg.distance.text
+        });
+      }
+    );
+  });
 }
 
 // ===============================
@@ -294,12 +596,20 @@ function getSpotPhotoUrl(spot) {
 // ===============================
 // タイプ整形
 // ===============================
-function formatGoodRoadTypes(types = [], roadType) {
+function formatGoodRoadTypes(types = [], spotName = "", roadType = null) {
+  const name = String(spotName || "");
+
+  if (/道の駅/.test(name)) return "道の駅";
+  if (/展望台|絶景|景勝地/.test(name)) return "景色スポット";
+  if (/高原|スカイライン|ライン/.test(name)) return "走って気持ちいい道";
+  if (/峠|山道|林道/.test(name)) return "山道・峠道";
+  if (/湖|ダム|海|岬|海岸/.test(name)) return "景色道";
+  if (/公園/.test(name)) return "のんびり立ち寄り";
+
   const typeMap = {
     tourist_attraction: "立ち寄りスポット",
     park: "公園",
     point_of_interest: "スポット",
-    scenic_lookout: "展望スポット",
     campground: "キャンプ場",
     natural_feature: "自然スポット",
     museum: "観光スポット"
@@ -313,57 +623,217 @@ function formatGoodRoadTypes(types = [], roadType) {
     return [...new Set(labels)].slice(0, 2).join("・");
   }
 
-  if (roadType && roadType.key === "relaxed") return "のんびり走りやすい道";
-  if (roadType && roadType.key === "scenic") return "景色を楽しみやすい道";
-  if (roadType && roadType.key === "mild_curve") return "緩いカーブを楽しみやすい道";
-
-  return "気持ちよく走れそうな道";
+  return roadType ? roadType.label.replace(/[🌿🌅🏍]/g, "").trim() : "気持ちよく走れそうな道";
 }
 
 // ===============================
-// 軽い説明文
+// 説明文
 // ===============================
 function buildGoodRoadCatchCopy(spot, roadType) {
-  const rating = Number(spot.rating || 0);
-  const reviews = Number(spot.user_ratings_total || 0);
+  const name = String(spot?.name || "");
+  const types = Array.isArray(spot?.types) ? spot.types.join(" ") : "";
+  const text = `${name} ${types}`;
 
-  if (roadType.key === "relaxed") {
-    if (rating >= 4.2 && reviews >= 100) {
-      return "のんびり景色を楽しみながら走りたい日に向いていそうです。";
-    }
-    return "混みすぎない雰囲気で、落ち着いて走りたい日に合いそうです。";
+  if (/道の駅/.test(text)) {
+    return "走ったあとの休憩にも使いやすそうな道の駅候補です。";
+  }
+
+  if (/展望台|絶景|景勝地/.test(text)) {
+    return "景色を楽しみながら走った先に立ち寄りたくなる候補です。";
+  }
+
+  if (/高原|スカイライン|ライン/.test(text)) {
+    return "開放感のある走りを楽しめそうな候補です。";
+  }
+
+  if (/峠|山道|林道/.test(text)) {
+    return "緩いカーブを楽しみたい日に合いそうな候補です。";
+  }
+
+  if (/湖|ダム|海|岬|海岸/.test(text)) {
+    return "景色を見ながらのんびり走りたくなる候補です。";
+  }
+
+  if (roadType.key === "mild_curve") {
+    return "緩やかなカーブを楽しみながら向かえそうな候補です。";
   }
 
   if (roadType.key === "scenic") {
-    if (rating >= 4.2) {
-      return "景色を楽しみながら走りたい日に立ち寄りたくなる候補です。";
-    }
-    return "景色重視で気分転換したいときに良さそうな候補です。";
+    return "景色を楽しみながら向かいたくなる候補です。";
   }
 
-  if (rating >= 4.2 && reviews >= 100) {
-    return "緩いカーブや道の雰囲気を楽しみやすい人気候補です。";
-  }
-
-  return "走ること自体も楽しみたい日に向いていそうな候補です。";
+  return "のんびり走りたい日にちょうど良さそうな候補です。";
 }
 
 // ===============================
 // 履歴保存
 // ===============================
+const DOKOIKO_HISTORY_KEY = "dokoiko_history";
+const DOKOIKO_HISTORY_MAX = 6;
+
 function saveGoodRoadHistoryItem(data) {
-  const key = "dokoiko_goodroad_history";
-  const current = JSON.parse(localStorage.getItem(key) || "[]");
+  let current = [];
 
-  const filtered = current.filter(item => item.placeId !== data.placeId);
+  try {
+    current = JSON.parse(localStorage.getItem(DOKOIKO_HISTORY_KEY) || "[]");
+  } catch (e) {
+    current = [];
+  }
 
-  filtered.unshift({
+  const historyItem = {
     savedAt: new Date().toISOString(),
+    sourceType: "goodroad",
+    sourceLabel: "気持ちよく走れる道版",
+    genreName: "気持ちよく走れる道",
+    placeId: data.placeId || data.place_id || data.name || "",
     ...data
+  };
+
+  const filtered = current.filter(item => {
+    return !(item.placeId === historyItem.placeId && item.sourceType === historyItem.sourceType);
   });
 
-  const trimmed = filtered.slice(0, 8);
-  localStorage.setItem(key, JSON.stringify(trimmed));
+  filtered.unshift(historyItem);
+
+  localStorage.setItem(
+    DOKOIKO_HISTORY_KEY,
+    JSON.stringify(filtered.slice(0, DOKOIKO_HISTORY_MAX))
+  );
+}
+
+// ===============================
+// GoogleマップURL
+// ===============================
+function buildGoogleMapsUrl(spot, highway) {
+  let url =
+    `https://www.google.com/maps/dir/?api=1` +
+    `&origin=${encodeURIComponent(startAddressGlobal)}` +
+    `&destination=${encodeURIComponent(spot.name)}` +
+    `&destination_place_id=${spot.place_id}` +
+    `&travelmode=driving`;
+
+  if (highway !== "yes") {
+    url += `&avoid=highways`;
+  }
+
+  return url;
+}
+
+// ===============================
+// 結果カード描画
+// ===============================
+function renderGoodRoadResultCard(box, spot, distance, time, highway, roadType, index, routeInfo = null) {
+  const slat = spot.geometry.location.lat();
+  const slng = spot.geometry.location.lng();
+  const rating = spot.rating || "評価なし";
+  const reviews = spot.user_ratings_total || 0;
+  const photoUrl = getSpotPhotoUrl(spot);
+  const typeLabel = formatGoodRoadTypes(spot.types, spot.name, roadType);
+  const catchCopy = buildGoodRoadCatchCopy(spot, roadType);
+  const mapUrl = buildGoogleMapsUrl(spot, highway);
+
+  const shareText =
+    `${spot.name} を見つけたよ！ ${roadType.label} / ⭐${rating} #どこいこMap`;
+
+  const marker = new google.maps.Marker({
+    position: { lat: slat, lng: slng },
+    map: map,
+    title: spot.name,
+    icon: {
+      url: `${IMAGE_BASE_PATH}/red_dog.png`,
+      scaledSize: new google.maps.Size(50, 50)
+    }
+  });
+
+  spotMarkers.push(marker);
+  fitMapToMarkers();
+
+  const displayDistanceKm = routeInfo ? routeInfo.distanceKm : Number(distance.toFixed(1));
+  const displayDistanceText = routeInfo ? routeInfo.distanceText : `約${distance.toFixed(1)}km`;
+  const displayDurationText = routeInfo ? routeInfo.durationText : `${time}分以内`;
+
+  saveGoodRoadHistoryItem({
+    pageType: "goodRoad",
+    roadTypeKey: roadType.key,
+    roadTypeLabel: roadType.label,
+    name: spot.name,
+    address: spot.vicinity || "",
+    rating: rating,
+    reviews: reviews,
+    distanceKm: displayDistanceKm,
+    distanceText: displayDistanceText,
+    durationText: displayDurationText,
+    time: time,
+    highway: highway,
+    placeId: spot.place_id,
+    mapUrl: mapUrl,
+    photoUrl: photoUrl,
+    catchCopy: catchCopy
+  });
+
+  box.dataset.mapUrl = mapUrl;
+  box.dataset.shareText = shareText;
+
+  box.innerHTML = `
+<div class="genre">
+<img src="${IMAGE_BASE_PATH}/red_dog.png" class="genre-dog">
+${roadType.label}
+</div>
+
+${photoUrl ? `
+<div class="spot-photo-wrap">
+<img src="${photoUrl}" alt="${spot.name}" class="spot-photo" loading="lazy">
+</div>
+` : ""}
+
+<div class="spot-name">${spot.name}</div>
+<div class="spot-copy">${catchCopy}</div>
+
+📍 ${spot.vicinity || "住所情報なし"}<br>
+⭐ ${rating} (${reviews}件)<br>
+🏷 ${typeLabel}<br>
+🎯 道の雰囲気：${roadType.label}<br>
+🚗 ${displayDistanceText}<br>
+⏱ ${displayDurationText}<br>
+🛣 ${time === 30 ? "下道のみ" : (highway === "yes" ? "高速あり" : "下道のみ")}<br><br>
+
+<div class="result-actions">
+<a href="${mapUrl}" target="_blank" rel="noopener noreferrer">
+🧭 Googleマップでナビ
+</a>
+
+<button type="button" class="share-button" onclick="shareGoodRoadResult(${index})">
+共有する
+</button>
+</div>
+`;
+}
+
+// ===============================
+// 地図範囲
+// ===============================
+function fitMapToMarkers() {
+  const bounds = new google.maps.LatLngBounds();
+
+  if (startMarker && startMarker.getPosition) {
+    bounds.extend(startMarker.getPosition());
+  }
+
+  spotMarkers.forEach(marker => {
+    if (marker && marker.getPosition) {
+      bounds.extend(marker.getPosition());
+    }
+  });
+
+  if (!bounds.isEmpty()) {
+    map.fitBounds(bounds);
+
+    google.maps.event.addListenerOnce(map, "bounds_changed", function () {
+      if (map.getZoom() > 12) {
+        map.setZoom(12);
+      }
+    });
+  }
 }
 
 // ===============================
@@ -394,734 +864,22 @@ function shareGoodRoadResult(index) {
   window.open(xUrl, "_blank");
 }
 
-
 // ===============================
-// ランダム座標生成（ドーナツ型）
-// ===============================
-function createRandomPoint(lat, lng, minDistanceKm, maxDistanceKm) {
-  const safeMin = Math.max(0, minDistanceKm || 0);
-  const safeMax = Math.max(safeMin + 0.5, maxDistanceKm || safeMin + 0.5);
-
-  const minR = safeMin / 111;
-  const maxR = safeMax / 111;
-
-  const u = Math.random();
-  const v = Math.random();
-
-  const r = Math.sqrt((maxR * maxR - minR * minR) * u + minR * minR);
-  const t = 2 * Math.PI * v;
-
-  const newLat = lat + r * Math.cos(t);
-  const newLng = lng + (r * Math.sin(t)) / Math.cos((lat * Math.PI) / 180);
-
-  const distanceKm = r * 111;
-
-  return { lat: newLat, lng: newLng, distanceKm };
-}
-
-// ===============================
-// 最大距離計算
-// ===============================
-function maxDistanceByTime(time, highway) {
-  const hours = time / 60;
-  const speed = highway === "yes" ? HIGHWAY_SPEED : LOCAL_SPEED;
-  return hours * speed;
-}
-
-// ===============================
-// 最小距離計算（ドーナツ型用）
-// ===============================
-function getMinDistanceByTime(maxDistance, time, highway) {
-  if (time === 30) return 0;
-  if (time === 60) return maxDistance * (highway === "yes" ? 0.45 : 0.35);
-  if (time === 90) return maxDistance * (highway === "yes" ? 0.65 : 0.55);
-  if (time === 120) return maxDistance * (highway === "yes" ? 0.75 : 0.65);
-  return 0;
-}
-
-// ===============================
-// 時間ごとの雰囲気
-// ===============================
-function getTimeProfile(time) {
-  if (time <= 30) {
-    return {
-      candidateMinDistance: 6,
-      candidateMaxRatio: 0.55,
-      typeOrder: ["relaxed", "scenic", "mild_curve"]
-    };
-  }
-
-  if (time <= 60) {
-    return {
-      candidateMinDistance: 12,
-      candidateMaxRatio: 0.75,
-      typeOrder: ["relaxed", "mild_curve", "scenic"]
-    };
-  }
-
-  if (time <= 90) {
-    return {
-      candidateMinDistance: 18,
-      candidateMaxRatio: 0.85,
-      typeOrder: ["mild_curve", "scenic", "relaxed"]
-    };
-  }
-
-  return {
-    candidateMinDistance: 25,
-    candidateMaxRatio: 1.0,
-    typeOrder: ["scenic", "mild_curve", "relaxed"]
-  };
-}
-
-function getRoadTypeByIndex(index, time) {
-  const profile = getTimeProfile(time);
-  const key = profile.typeOrder[index] || "relaxed";
-  return ROAD_TYPES.find(type => type.key === key) || ROAD_TYPES[0];
-}
-
-function getRoadTypeByKey(key) {
-  return ROAD_TYPES.find(type => type.key === key) || ROAD_TYPES[0];
-}
-
-function getSelectedRoadTypeKey() {
-  const el = document.getElementById("roadType");
-  return el ? el.value : null;
-}
-
-function buildFallbackTypeOrder(selectedKey, time, slotIndex) {
-  const profile = getTimeProfile(time);
-  const baseOrder = [...profile.typeOrder];
-
-  if (selectedKey && !baseOrder.includes(selectedKey)) {
-    baseOrder.unshift(selectedKey);
-  }
-
-  const rotated = [];
-  if (selectedKey) {
-    rotated.push(selectedKey);
-  } else {
-    rotated.push(baseOrder[slotIndex] || baseOrder[0]);
-  }
-
-  baseOrder.forEach(key => {
-    if (!rotated.includes(key)) rotated.push(key);
-  });
-
-  return rotated.map(getRoadTypeByKey);
-}
-
-// ===============================
-// 距離計算
-// ===============================
-function calcDistance(lat1, lng1, lat2, lng2) {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-    Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) ** 2;
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRad(deg) {
-  return deg * Math.PI / 180;
-}
-
-function calcBearing(lat1, lng1, lat2, lng2) {
-  const y = Math.sin(toRad(lng2 - lng1)) * Math.cos(toRad(lat2));
-  const x =
-    Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
-    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lng2 - lng1));
-
-  return Math.atan2(y, x) * 180 / Math.PI;
-}
-
-function normalizeAngle(angle) {
-  let a = angle;
-  while (a > 180) a -= 360;
-  while (a < -180) a += 360;
-  return Math.abs(a);
-}
-
-// ===============================
-// ルート評価
-// ===============================
-function scoreRouteComfort(route) {
-  if (!route || !route.overview_path || route.overview_path.length < 3) {
-    return 1;
-  }
-
-  const path = route.overview_path;
-  let mildTurnCount = 0;
-  let sharpTurnCount = 0;
-  let totalAngleChange = 0;
-
-  for (let i = 1; i < path.length - 1; i++) {
-    const p1 = path[i - 1];
-    const p2 = path[i];
-    const p3 = path[i + 1];
-
-    const b1 = calcBearing(p1.lat(), p1.lng(), p2.lat(), p2.lng());
-    const b2 = calcBearing(p2.lat(), p2.lng(), p3.lat(), p3.lng());
-    const diff = normalizeAngle(b2 - b1);
-
-    if (diff > 12 && diff <= 45) mildTurnCount++;
-    if (diff > 45) sharpTurnCount++;
-    totalAngleChange += diff;
-  }
-
-  const leg = route.legs && route.legs[0];
-  const distanceKm = leg ? leg.distance.value / 1000 : 1;
-  const durationMin = leg ? leg.duration.value / 60 : 1;
-
-  const mildDensity = mildTurnCount / Math.max(distanceKm, 1);
-  const sharpDensity = sharpTurnCount / Math.max(distanceKm, 1);
-  const speedFactor = distanceKm / Math.max(durationMin, 1);
-
-  return (
-    mildDensity * 18 +
-    speedFactor * 25 -
-    sharpDensity * 20 +
-    totalAngleChange * 0.01
-  );
-}
-
-function getRouteToCandidate(origin, destination, highway, callback) {
-  try {
-    const directionsService = new google.maps.DirectionsService();
-
-    directionsService.route(
-      {
-        origin,
-        destination,
-        travelMode: google.maps.TravelMode.DRIVING,
-        avoidHighways: highway === "no",
-        optimizeWaypoints: false
-      },
-      function (result, status) {
-        if (status !== "OK" || !result.routes || !result.routes[0]) {
-          callback({ route: null, score: 1 });
-          return;
-        }
-
-        const route = result.routes[0];
-        const score = scoreRouteComfort(route);
-        callback({ route, score });
-      }
-    );
-  } catch (error) {
-    callback({ route: null, score: 1 });
-  }
-}
-
-// ===============================
-// 候補中心点の品質判定
-// ===============================
-function analyzeAreaPreference(results) {
-  const addressText =
-    (results[0] && results[0].formatted_address ? results[0].formatted_address : "") +
-    " " +
-    (results[0] && results[0].address_components
-      ? results[0].address_components.map(c => c.long_name).join(" ")
-      : "");
-
-  let score = 0;
-
-  if (/東京都千代田区|東京都中央区|東京都港区|東京都新宿区|東京都渋谷区|東京都豊島区|東京都台東区|東京都品川区|東京都目黒区|東京都文京区|東京都墨田区|東京都江東区/i.test(addressText)) {
-    score -= 4;
-  }
-
-  if (/八王子|青梅|あきる野|日の出|檜原|奥多摩|秩父|飯能|君津|富津|館山|いすみ|鴨川|南房総|御宿|勝浦|銚子|鹿嶋|神栖|大洗|那須|日光|伊豆|箱根|富士|山中湖|河口湖|軽井沢|蓼科|清里/i.test(addressText)) {
-    score += 4;
-  }
-
-  if (/郊外|高原|山|湖|海|岬|渓谷|農|田|原|自然|公園|丘/i.test(addressText)) {
-    score += 2;
-  }
-
-  if (/駅|駅前|銀座|新宿|渋谷|池袋|上野|秋葉原|六本木|繁華街|都心/i.test(addressText)) {
-    score -= 3;
-  }
-
-  return score;
-}
-
-function findBestGoodRoadPoint(time, highway, callback) {
-  const maxDistance = maxDistanceByTime(time, highway);
-  const geocoder = new google.maps.Geocoder();
-  const profile = getTimeProfile(time);
-
-  let checked = 0;
-  let bestCandidate = null;
-
-  const profileMaxDistance = maxDistance * profile.candidateMaxRatio;
-  const minDistance = Math.max(
-    profile.candidateMinDistance,
-    getMinDistanceByTime(profileMaxDistance, time, highway)
-  );
-
-  for (let i = 0; i < CANDIDATE_POINT_COUNT; i++) {
-    const point = createRandomPoint(
-      startLat,
-      startLng,
-      minDistance,
-      profileMaxDistance
-    );
-
-    geocoder.geocode(
-      { location: { lat: point.lat, lng: point.lng } },
-      function (results, status) {
-        if (status === "OK" && results[0]) {
-          const areaScore = analyzeAreaPreference(results);
-
-          getRouteToCandidate(
-            { lat: startLat, lng: startLng },
-            { lat: point.lat, lng: point.lng },
-            highway,
-            function (routeData) {
-              checked++;
-
-              const totalScore = (routeData ? routeData.score : 1) + areaScore;
-
-              const candidate = {
-                lat: point.lat,
-                lng: point.lng,
-                distanceKm: point.distanceKm,
-                score: totalScore,
-                route: routeData ? routeData.route : null
-              };
-
-              if (!bestCandidate || candidate.score > bestCandidate.score) {
-                bestCandidate = candidate;
-              }
-
-              if (checked === CANDIDATE_POINT_COUNT) {
-                callback(bestCandidate);
-              }
-            }
-          );
-          return;
-        }
-
-        checked++;
-        if (checked === CANDIDATE_POINT_COUNT) {
-          callback(bestCandidate);
-        }
-      }
-    );
-  }
-}
-
-// ===============================
-// 3件検索
-// ===============================
-function searchThreeGoodRoad(lat, lng, distance, time, highway) {
-  hideLoadingState();
-  searchGoodRoadSequentially(0, lat, lng, distance, time, highway);
-}
-
-function searchGoodRoadSequentially(index, baseLat, baseLng, baseDistance, time, highway) {
-  if (index >= 3) {
-    showResultWithEffect();
-    document.getElementById("rerollButton").classList.remove("hidden");
-    return;
-  }
-
-  const profile = getTimeProfile(time);
-
-  const localMinDistance = Math.max(
-    Math.min(baseDistance * 0.35, baseDistance - 1),
-    Math.max(profile.candidateMinDistance * 0.2, 2)
-  );
-
-  const localMaxDistance = Math.max(baseDistance * 0.85, localMinDistance + 1);
-
-  const point = createRandomPoint(
-    baseLat,
-    baseLng,
-    localMinDistance,
-    localMaxDistance
-  );
-
-  const selectedKey = getSelectedRoadTypeKey();
-  const fallbackTypes = buildFallbackTypeOrder(selectedKey, time, index);
-
-  searchNearbyGoodRoad(
-    point.lat,
-    point.lng,
-    point.distanceKm,
-    time,
-    highway,
-    index,
-    fallbackTypes,
-    0,
-    function (success, usedRoadType) {
-      if (!success) {
-        const defaultType = fallbackTypes[0];
-        document.getElementById(`result${index + 1}`).innerHTML = `
-          <div class="genre">
-            <img src="../image/red_dog.png" class="genre-dog">
-            ${defaultType.label}
-          </div>
-          候補を見つけにくかったので、もう一度まわしてみてね
-        `;
-      }
-
-      searchGoodRoadSequentially(index + 1, baseLat, baseLng, baseDistance, time, highway);
-    }
-  );
-}
-
-// ===============================
-// Placesスコア
-// ===============================
-function getPlaceScore(place, roadType, time) {
-  const name = place.name || "";
-  const vicinity = place.vicinity || "";
-  const types = Array.isArray(place.types) ? place.types.join(" ") : "";
-  const text = `${name} ${vicinity} ${types}`;
-
-  let score = 0;
-
-  if (roadType.regex.test(text)) score += 10;
-
-  if (/海|海岸|展望|パノラマ|高原|スカイライン|岬|湖|風景|景色/i.test(text)) {
-    score += roadType.key === "scenic" ? 8 : 3;
-  }
-
-  if (/農道|田園|郊外|公園|川|湖|ロード|ドライブ/i.test(text)) {
-    score += roadType.key === "relaxed" ? 8 : 3;
-  }
-
-  if (/峠|山道|ワインディング|ライン|高原|スカイライン/i.test(text)) {
-    score += roadType.key === "mild_curve" ? 8 : 3;
-  }
-
-  if (/道の駅|展望広場|絶景スポット|ビューポイント|park|point_of_interest|tourist_attraction/i.test(text)) {
-    score += 4;
-  }
-
-  if (/駅|駅前|繁華街|商店街|ビル|シティ|都心/i.test(text)) {
-    score -= 8;
-  }
-
-  if (/東京都千代田区|東京都中央区|東京都港区|東京都新宿区|東京都渋谷区|東京都豊島区|東京都台東区/i.test(vicinity)) {
-    score -= 10;
-  }
-
-  score += Math.min(place.user_ratings_total || 0, 300) * 0.02;
-  score += (place.rating || 0) * 1.2;
-
-  if (time <= 30 && /展望台|岬|峠/.test(text)) {
-    score -= 2;
-  }
-
-  if (time >= 120 && /展望台|高原|スカイライン|峠|海岸/.test(text)) {
-    score += 3;
-  }
-
-  return score;
-}
-
-// ===============================
-// Places API検索
-// ===============================
-function searchNearbyGoodRoad(lat, lng, distance, time, highway, index, roadTypes, typeTryIndex = 0, callback = null) {
-  const currentRoadType = roadTypes[typeTryIndex];
-  if (!currentRoadType) {
-    if (callback) callback(false, null);
-    return;
-  }
-
-  const service = new google.maps.places.PlacesService(map);
-  const box = document.getElementById(`result${index + 1}`);
-
-  const radiusBase = Math.max(distance * 1000, 8000);
-  const radiusList = [
-    radiusBase,
-    Math.floor(radiusBase * 1.5),
-    Math.floor(radiusBase * 2.0)
-  ];
-
-  searchNearbyGoodRoadByRadius(
-    service,
-    lat,
-    lng,
-    radiusList,
-    currentRoadType,
-    time,
-    function (success, spot) {
-      if (success && spot) {
-        usedPlaceIds.add(spot.place_id);
-
-        const slat = spot.geometry.location.lat();
-        const slng = spot.geometry.location.lng();
-        const rating = spot.rating || "評価なし";
-        const reviews = spot.user_ratings_total || 0;
-        const photoUrl = getSpotPhotoUrl(spot);
-        const typeLabel = formatGoodRoadTypes(spot.types, currentRoadType);
-        const catchCopy = buildGoodRoadCatchCopy(spot, currentRoadType);
-
-        const mapUrl =
-          `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(startAddressGlobal)}` +
-          `&destination=${encodeURIComponent(spot.name)}` +
-          `&destination_place_id=${spot.place_id}`;
-
-        const shareText =
-          `${spot.name} を見つけたよ！ ${currentRoadType.label} / ⭐${rating} #どこいこMap`;
-
-        const marker = new google.maps.Marker({
-          position: { lat: slat, lng: slng },
-          map: map,
-          title: spot.name,
-          icon: {
-            url: "../image/red_dog.png",
-            scaledSize: new google.maps.Size(50, 50)
-          }
-        });
-
-        spotMarkers.push(marker);
-        fitMapToMarkers();
-
-        const fallbackNote =
-          typeTryIndex > 0
-            ? `<div class="fallback-note">※近い候補が少なかったため「${currentRoadType.label}」で表示しています</div>`
-            : "";
-
-        saveGoodRoadHistoryItem({
-          pageType: "goodRoad",
-          roadTypeKey: currentRoadType.key,
-          roadTypeLabel: currentRoadType.label,
-          name: spot.name,
-          address: spot.vicinity || "",
-          rating: rating,
-          reviews: reviews,
-          distanceKm: Number(distance.toFixed(1)),
-          time: time,
-          highway: highway,
-          placeId: spot.place_id,
-          mapUrl: mapUrl,
-          photoUrl: photoUrl,
-          catchCopy: catchCopy
-        });
-
-        box.dataset.mapUrl = mapUrl;
-        box.dataset.shareText = shareText;
-
-        box.innerHTML = `
-          <div class="genre">
-            <img src="../image/red_dog.png" class="genre-dog">
-            ${currentRoadType.label}
-          </div>
-
-          ${fallbackNote}
-
-          ${photoUrl ? `
-          <div class="spot-photo-wrap">
-            <img src="${photoUrl}" alt="${spot.name}" class="spot-photo" loading="lazy">
-          </div>
-          ` : ""}
-
-          <div class="spot-name">${spot.name}</div>
-          <div class="spot-copy">${catchCopy}</div>
-
-          📍 ${spot.vicinity || "住所情報なし"}<br>
-          ⭐ ${rating} (${reviews}件)<br>
-          🏷 ${typeLabel}<br>
-          🚗 約${distance.toFixed(1)}km / ${time}分以内<br><br>
-
-          <div class="result-actions">
-            <a
-              href="${mapUrl}"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              🧭 Googleマップでナビ
-            </a>
-
-            <button type="button" class="share-button" onclick="shareGoodRoadResult(${index})">
-              共有する
-            </button>
-          </div>
-        `;
-
-        if (callback) callback(true, currentRoadType);
-        return;
-      }
-
-      searchNearbyGoodRoad(
-        lat,
-        lng,
-        distance,
-        time,
-        highway,
-        index,
-        roadTypes,
-        typeTryIndex + 1,
-        callback
-      );
-    }
-  );
-}
-
-function searchNearbyGoodRoadByRadius(service, lat, lng, radiusList, roadType, time, done) {
-  let radiusIndex = 0;
-
-  function tryNextRadius() {
-    if (radiusIndex >= radiusList.length) {
-      done(false, null);
-      return;
-    }
-
-    const radius = radiusList[radiusIndex];
-
-    const requests = [
-      {
-        location: { lat, lng },
-        radius,
-        keyword: roadType.keywords
-      },
-      {
-        location: { lat, lng },
-        radius,
-        keyword: COMMON_FALLBACK_KEYWORDS
-      },
-      {
-        location: { lat, lng },
-        radius,
-        type: "tourist_attraction",
-        keyword: "展望 景色 ドライブ"
-      },
-      {
-        location: { lat, lng },
-        radius,
-        type: "park",
-        keyword: "景色 高原 公園"
-      }
-    ];
-
-    searchNearbyByRequests(service, requests, function (results) {
-      if (!results || results.length === 0) {
-        radiusIndex++;
-        tryNextRadius();
-        return;
-      }
-
-      let filtered = results.filter(place => {
-        if (!place.geometry || !place.geometry.location) return false;
-        if (!place.place_id) return false;
-        if (usedPlaceIds.has(place.place_id)) return false;
-
-        const plat = place.geometry.location.lat();
-        const plng = place.geometry.location.lng();
-
-        const tooClose = spotMarkers.some(marker => {
-          if (!marker || !marker.getPosition) return false;
-          const pos = marker.getPosition();
-          return calcDistance(plat, plng, pos.lat(), pos.lng()) < EXCLUDE_DISTANCE_KM;
-        });
-
-        return !tooClose;
-      });
-
-      if (filtered.length === 0) {
-        radiusIndex++;
-        tryNextRadius();
-        return;
-      }
-
-      filtered.sort((a, b) => {
-        return getPlaceScore(b, roadType, time) - getPlaceScore(a, roadType, time);
-      });
-
-      const top = filtered.slice(0, 8);
-      const pick = top[Math.floor(Math.random() * Math.min(top.length, 3))] || top[0];
-
-      if (!pick) {
-        radiusIndex++;
-        tryNextRadius();
-        return;
-      }
-
-      done(true, pick);
-    });
-  }
-
-  tryNextRadius();
-}
-
-function searchNearbyByRequests(service, requests, callback) {
-  const merged = [];
-  let finished = 0;
-
-  requests.forEach(request => {
-    service.nearbySearch(request, function (results, status) {
-      if (
-        status === google.maps.places.PlacesServiceStatus.OK &&
-        results &&
-        results.length > 0
-      ) {
-        results.forEach(place => {
-          if (!merged.some(item => item.place_id === place.place_id)) {
-            merged.push(place);
-          }
-        });
-      }
-
-      finished++;
-      if (finished === requests.length) {
-        callback(merged);
-      }
-    });
-  });
-}
-
-// ===============================
-// 地図の表示範囲調整
-// ===============================
-function fitMapToMarkers() {
-  const bounds = new google.maps.LatLngBounds();
-
-  if (startMarker && startMarker.getPosition) {
-    bounds.extend(startMarker.getPosition());
-  }
-
-  spotMarkers.forEach(marker => {
-    if (marker && marker.getPosition) {
-      bounds.extend(marker.getPosition());
-    }
-  });
-
-  if (!bounds.isEmpty()) {
-    map.fitBounds(bounds);
-
-    google.maps.event.addListenerOnce(map, "bounds_changed", function () {
-      if (map.getZoom() > 12) {
-        map.setZoom(12);
-      }
-    });
-  }
-}
-
-// ===============================
-// UI表示アニメ
+// 表示アニメ
 // ===============================
 function showResultWithEffect() {
   const box = document.getElementById("results");
+  if (!box) return;
+
+  box.classList.remove("hidden");
   box.classList.remove("show");
+
   void box.offsetWidth;
+
   box.classList.add("show");
 
   if (hasRealResults()) {
-    setTimeout(() => {
-      launchConfetti();
-    }, 250);
+    launchConfetti();
   }
 }
 
@@ -1133,10 +891,12 @@ function launchConfetti() {
 
   for (let i = 0; i < 40; i++) {
     const confetti = document.createElement("div");
+
     confetti.classList.add("confetti");
     confetti.style.left = Math.random() * 100 + "vw";
     confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
     confetti.style.animationDuration = 2 + Math.random() * 2 + "s";
+
     document.body.appendChild(confetti);
 
     setTimeout(() => {
@@ -1145,8 +905,18 @@ function launchConfetti() {
   }
 }
 
+function hasRealResults() {
+  const ids = ["result1", "result2", "result3"];
+
+  return ids.some(id => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    return el.querySelector(".spot-name");
+  });
+}
+
 // ===============================
-// もう一回まわす
+// もう一回
 // ===============================
 function rerollGoodRoad() {
   if (!startLat || !startLng) {
@@ -1156,19 +926,15 @@ function rerollGoodRoad() {
 
   const time = Number(document.getElementById("timeSelect").value);
   const highway = document.getElementById("highway").value;
+  const roadType = getSelectedRoadType();
+
+  const geocoder = new google.maps.Geocoder();
+  const maxDistance = maxDistanceByTime(time, highway);
 
   clearResults();
-  showLoadingState();
+  showLoadingState("検索中...", "わんこが別の気持ちいい道を探してるよ");
 
-  findBestGoodRoadPoint(time, highway, function (bestPoint) {
-    if (!bestPoint) {
-      hideLoadingState();
-      alert("別候補をうまく見つけられませんでした。もう一度試してみてね！");
-      return;
-    }
-
-    searchThreeGoodRoad(bestPoint.lat, bestPoint.lng, bestPoint.distanceKm, time, highway);
-  });
+  findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, roadType);
 }
 
 // ===============================
@@ -1215,21 +981,71 @@ function updateHighwayControl() {
   }
 }
 
-// ===============================
-// 初期イベント
-// ===============================
 window.addEventListener("DOMContentLoaded", function () {
   const timeSelect = document.getElementById("timeSelect");
-  timeSelect.addEventListener("change", updateHighwayControl);
-  updateHighwayControl();
+
+  if (timeSelect) {
+    timeSelect.addEventListener("change", updateHighwayControl);
+    updateHighwayControl();
+  }
 });
 
-function hasRealResults() {
-  const ids = ["result1", "result2", "result3"];
+// ===============================
+// 検索中わんこ
+// ===============================
+function showLoadingState(message = "検索中...", subMessage = "わんこが目的地を探してるよ") {
+  const resultsBox = document.getElementById("results");
+  if (!resultsBox) return;
 
-  return ids.some(id => {
-    const el = document.getElementById(id);
-    if (!el) return false;
-    return el.querySelector(".spot-name");
-  });
+  resultsBox.classList.remove("hidden");
+  resultsBox.classList.add("show");
+  resultsBox.classList.add("loading");
+
+  resultsBox.innerHTML = `
+<div id="loadingBox" class="loading-box">
+<div class="loading-dog">
+<img src="${IMAGE_BASE_PATH}/dog.png" alt="検索中" class="loading-dog-image">
+</div>
+<div class="loading-text" id="loadingText">${message}</div>
+<div class="loading-subtext">${subMessage}</div>
+</div>
+
+<div id="result1" class="result-item"></div>
+<div id="result2" class="result-item"></div>
+<div id="result3" class="result-item"></div>
+`;
+
+  const texts = ["検索中...", "検索中 .", "検索中 ..", "検索中 ..."];
+  let i = 0;
+
+  if (loadingTimer) {
+    clearInterval(loadingTimer);
+  }
+
+  loadingTimer = setInterval(() => {
+    const el = document.getElementById("loadingText");
+    if (!el) return;
+    el.textContent = texts[i % texts.length];
+    i++;
+  }, 350);
+}
+
+// ===============================
+// 検索中解除
+// ===============================
+function hideLoadingState() {
+  if (loadingTimer) {
+    clearInterval(loadingTimer);
+    loadingTimer = null;
+  }
+
+  const resultsBox = document.getElementById("results");
+  if (!resultsBox) return;
+
+  resultsBox.classList.remove("loading");
+
+  const loadingBox = document.getElementById("loadingBox");
+  if (loadingBox) {
+    loadingBox.remove();
+  }
 }
