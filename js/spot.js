@@ -26,7 +26,7 @@ const SEARCH_RADIUS_MIN = 5000;
 const SEARCH_RETRY_LIMIT = 1;
 
 // ルート判定用
-const ROUTE_CHECK_CANDIDATES_PER_GENRE = 4;
+const ROUTE_CHECK_CANDIDATES_PER_GENRE = 1;
 const TIME_TOLERANCE_MINUTES = 20;
 
 // ===============================
@@ -147,10 +147,50 @@ function createRandomPoint(lat, lng, minDistanceKm, maxDistanceKm) {
 }
 
 // ===============================
+// 方角ベースの候補中心点生成
+// ===============================
+function createDirectionalPoint(lat, lng, minDistanceKm, maxDistanceKm) {
+    const safeMin = Math.max(0, minDistanceKm || 0);
+    const safeMax = Math.max(safeMin + 0.5, maxDistanceKm || safeMin + 0.5);
+
+    const targetDistanceKm = safeMin + Math.random() * (safeMax - safeMin);
+
+    const baseAngles = [
+        0,                  // 北
+        Math.PI / 2,        // 東
+        Math.PI,            // 南
+        Math.PI * 1.5       // 西
+    ];
+
+    const baseAngle = baseAngles[Math.floor(Math.random() * baseAngles.length)];
+
+    // 少しだけズラす（±25度）
+    const randomOffset = (Math.random() - 0.5) * (Math.PI / 180) * 50;
+    const angle = baseAngle + randomOffset;
+
+    const distanceInDegrees = targetDistanceKm / 111;
+
+    const newLat = lat + distanceInDegrees * Math.cos(angle);
+    const newLng = lng + distanceInDegrees * Math.sin(angle) / Math.cos(lat * Math.PI / 180);
+
+    return {
+        lat: newLat,
+        lng: newLng,
+        distanceKm: targetDistanceKm
+    };
+}
+
+
+
+// ===============================
 function maxDistanceByTime(time, highway) {
-    const hours = time / 60;
-    const speed = highway === "yes" ? HIGHWAY_SPEED : LOCAL_SPEED;
-    return hours * speed;
+    if (time <= 30) return 10;
+    if (time <= 60) return highway === "yes" ? 30 : 25;
+    if (time <= 90) return highway === "yes" ? 50 : 48;
+    if (time <= 120) return highway === "yes" ? 55 : 50;
+    if (time <= 150) return highway === "yes" ? 65 : 60;
+    if (time <= 180) return highway === "yes" ? 75 : 65;
+    return highway === "yes" ? 120 : 85;
 }
 
 // ===============================
@@ -158,9 +198,11 @@ function maxDistanceByTime(time, highway) {
 // ===============================
 function getMinDistanceByTime(maxDistance, time, highway) {
     if (time === 30) return 0;
-    if (time === 60) return maxDistance * (highway === "yes" ? 0.40 : 0.30);
-    if (time === 90) return maxDistance * (highway === "yes" ? 0.60 : 0.50);
-    if (time === 120) return maxDistance * (highway === "yes" ? 0.70 : 0.60);
+    if (time === 60) return maxDistance * (highway === "yes" ? 0.30 : 0.25);
+    if (time === 90) return maxDistance * (highway === "yes" ? 0.45 : 0.40);
+    if (time === 120) return maxDistance * (highway === "yes" ? 0.55 : 0.50);
+    if (time === 150) return maxDistance * (highway === "yes" ? 0.65 : 0.60);
+    if (time === 180) return maxDistance * (highway === "yes" ? 0.75 : 0.65);
     return 0;
 }
 
@@ -182,17 +224,17 @@ function calcDistance(lat1, lng1, lat2, lng2) {
 }
 
 // ===============================
-// 候補中心点を探す
+// 候補中心点を探す（方角ベース）
 // ===============================
 function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt = 0) {
     if (attempt > MAX_POINT_ATTEMPTS) {
         hideLoadingState();
-        alert("海に当たってしまいました、もう一度回してください");
+        alert("候補地を見つけられませんでした。もう一度まわしてみてね！");
         return;
     }
 
     const minDistance = getMinDistanceByTime(maxDistance, time, highway);
-    const point = createRandomPoint(startLat, startLng, minDistance, maxDistance);
+    const point = createDirectionalPoint(startLat, startLng, minDistance, maxDistance);
 
     geocoder.geocode(
         { location: { lat: point.lat, lng: point.lng } },
@@ -301,25 +343,87 @@ function buildSpotCatchCopy(spot, genreName, keyword) {
 }
 
 // ===============================
-// 履歴保存
+// 共通履歴保存
 // ===============================
-function saveSpotHistoryItem(data) {
-    const key = "dokoiko_spot_history";
-    const current = JSON.parse(localStorage.getItem(key) || "[]");
+const DOKOIKO_HISTORY_KEY = "dokoiko_history";
+const DOKOIKO_HISTORY_MAX = 6;
+
+function saveDokoikoHistoryItem(data) {
+    const current = JSON.parse(localStorage.getItem(DOKOIKO_HISTORY_KEY) || "[]");
+
+    const placeId = data.placeId || data.place_id || data.name || data.placeName;
+
+    const historyItem = {
+        savedAt: new Date().toISOString(),
+        placeId: placeId,
+        ...data
+    };
 
     const filtered = current.filter(item => {
-        return !(item.placeId === data.placeId && item.genreName === data.genreName);
+        return !(item.placeId === historyItem.placeId && item.sourceType === historyItem.sourceType);
     });
 
-    filtered.unshift({
-        savedAt: new Date().toISOString(),
-        ...data
-    });
+    filtered.unshift(historyItem);
 
-    const trimmed = filtered.slice(0, 20);
-    localStorage.setItem(key, JSON.stringify(trimmed));
+    const trimmed = filtered.slice(0, DOKOIKO_HISTORY_MAX);
+
+    localStorage.setItem(DOKOIKO_HISTORY_KEY, JSON.stringify(trimmed));
 }
 
+// ===============================
+// スポット版
+// ===============================
+function saveSpotHistoryItem(data) {
+    saveDokoikoHistoryItem({
+        sourceType: "spot",
+        sourceLabel: "スポット版",
+        ...data
+    });
+}
+
+// ===============================
+// グルメ版
+// ===============================
+function saveGourmetHistoryItem(data) {
+    saveDokoikoHistoryItem({
+        sourceType: "gourmet",
+        sourceLabel: "グルメ版",
+        ...data
+    });
+}
+
+// ===============================
+// 観光版
+// ===============================
+function saveTourismHistoryItem(data) {
+    saveDokoikoHistoryItem({
+        sourceType: "tourism",
+        sourceLabel: "観光版",
+        ...data
+    });
+}
+
+// ===============================
+// 自然版
+// ===============================
+function saveNatureHistoryItem(data) {
+    saveDokoikoHistoryItem({
+        sourceType: "nature",
+        sourceLabel: "自然版",
+        ...data
+    });
+}
+
+// ===============================
+// 気持ちよく走れる道版
+// ===============================
+function saveGoodRoadHistoryItem(data) {
+    saveDokoikoHistoryItem({
+        sourceType: "goodroad",
+        sourceLabel: "気持ちよく走れる道版",
+        ...data
+    });
+}
 // ===============================
 // 共有
 // ===============================
@@ -335,7 +439,7 @@ function shareSpotResult(index) {
             title: "どこいこMap",
             text: shareText,
             url: shareUrl
-        }).catch(() => {});
+        }).catch(() => { });
         return;
     }
 
@@ -375,10 +479,12 @@ function getSpotGenreGroups() {
 // 実ルート許容範囲
 // ===============================
 function getRouteTimeRange(time) {
-    const min = Math.max(10, time - TIME_TOLERANCE_MINUTES);
-    const max = time + TIME_TOLERANCE_MINUTES;
-    return { min, max };
+    return {
+        min: Math.max(10, time * 0.5),
+        max: time
+    };
 }
+
 
 // ===============================
 // 実ルート取得
@@ -427,6 +533,120 @@ function getRouteInfoToSpot(spot, highway) {
             }
         );
     });
+}
+
+// ===============================
+// 軽量版：Directionsを使わずに候補を選ぶ
+// ===============================
+function pickBestSpotForGenreSmart(results, group, usedPlaceIds, time, maxDistance) {
+
+    let candidates = results.filter(place => {
+        if (!place || !place.place_id) return false;
+        if (usedPlaceIds.has(place.place_id)) return false;
+        if (!place.geometry || !place.geometry.location) return false;
+        return true;
+    });
+
+    if (candidates.length === 0) return null;
+
+    // ① まず一番遠い候補を探す
+    candidates.sort((a, b) => {
+        const da = calcDistance(startLat, startLng, a.geometry.location.lat(), a.geometry.location.lng());
+        const db = calcDistance(startLat, startLng, b.geometry.location.lat(), b.geometry.location.lng());
+        return db - da;
+    });
+
+    const farSpot = candidates[0];
+
+    const baseDistance = calcDistance(
+        startLat,
+        startLng,
+        farSpot.geometry.location.lat(),
+        farSpot.geometry.location.lng()
+    );
+
+    // ② その距離以内だけ残す
+    candidates = candidates.filter(place => {
+        const d = calcDistance(
+            startLat,
+            startLng,
+            place.geometry.location.lat(),
+            place.geometry.location.lng()
+        );
+
+        return d <= baseDistance;
+    });
+
+    // ③ スコアで選ぶ（ジャンル点 + 距離点）
+    candidates.sort((a, b) => {
+        const aDistance = calcDistance(
+            startLat,
+            startLng,
+            a.geometry.location.lat(),
+            a.geometry.location.lng()
+        );
+
+        const bDistance = calcDistance(
+            startLat,
+            startLng,
+            b.geometry.location.lat(),
+            b.geometry.location.lng()
+        );
+
+        const aScore =
+            getGenreScore(a, group, time) +
+            getDistanceScore(aDistance, maxDistance, time);
+
+        const bScore =
+            getGenreScore(b, group, time) +
+            getDistanceScore(bDistance, maxDistance, time);
+
+        return bScore - aScore;
+    });
+
+    const top = candidates.slice(0, 6);
+
+    return top[Math.floor(Math.random() * Math.min(top.length, 3))] || top[0];
+}
+
+// ===============================
+// 距離スコア：選択時間に合いそうな距離を優先
+// ===============================
+function getDistanceScore(straightDistance, maxDistance, time) {
+    const ratio = straightDistance / maxDistance;
+
+    let score = 0;
+
+    // 🎯 理想ゾーン（ここが命）
+    let idealMin = 0.6;
+    let idealMax = 0.9;
+
+    if (time <= 60) {
+        idealMin = 0.4;
+        idealMax = 0.8;
+    }
+
+    if (time >= 120) {
+        idealMin = 0.65;
+        idealMax = 0.95;
+    }
+
+    // 理想ゾーン
+    if (ratio >= idealMin && ratio <= idealMax) {
+        score += 30;
+    }
+
+    // 近すぎ
+    if (ratio < idealMin) {
+        score -= 20;
+    }
+
+    // 遠すぎ
+    if (ratio > idealMax) {
+        score -= 30;
+    }
+
+    return score;
 }
 
 // ===============================
@@ -488,9 +708,9 @@ async function pickBestSpotForGenreByRoute(results, group, usedPlaceIds, time, h
 }
 
 // ===============================
-// 1回検索して3ジャンルを作る
+// 1回検索して3ジャンルを作る（軽量版）
 // ===============================
-function searchThreeGenres(lat, lng, distance, time, highway) {
+async function searchThreeGenres(lat, lng, distance, time, highway) {
     completedSpotResults = 0;
 
     searchNearbySpotsOnce(lat, lng, distance, time, highway, async function (results) {
@@ -515,6 +735,7 @@ function searchThreeGenres(lat, lng, distance, time, highway) {
         }
 
         const usedPlaceIds = new Set();
+        const maxDistance = maxDistanceByTime(time, highway);
 
         for (let index = 0; index < genreGroups.length; index++) {
             const group = genreGroups[index];
@@ -522,9 +743,15 @@ function searchThreeGenres(lat, lng, distance, time, highway) {
 
             if (!box) continue;
 
-            const pickedData = await pickBestSpotForGenreByRoute(results, group, usedPlaceIds, time, highway);
+            const spot = pickBestSpotForGenreSmart(
+                results,
+                group,
+                usedPlaceIds,
+                time,
+                maxDistance
+            );
 
-            if (!pickedData) {
+            if (!spot) {
                 box.innerHTML = `
 <h3>${group.name}</h3>
 見つかりませんでした
@@ -533,17 +760,22 @@ function searchThreeGenres(lat, lng, distance, time, highway) {
                 continue;
             }
 
-            usedPlaceIds.add(pickedData.spot.place_id);
+            usedPlaceIds.add(spot.place_id);
+
+            // Directionsは表示用に1件だけ
+            const routeInfo = await getRouteInfoToSpot(spot, highway);
+
             renderSpotResultCard(
                 box,
-                pickedData.spot,
+                spot,
                 group,
                 distance,
                 time,
                 highway,
                 index,
-                pickedData.routeInfo
+                routeInfo
             );
+
             completedSpotResults++;
         }
 
@@ -626,6 +858,16 @@ function getGenreScore(place, group, time) {
     const reviews = Number(place.user_ratings_total || 0);
 
     let score = rating * 5 + Math.min(reviews, 300) * 0.05;
+
+    // 微妙に目的地感が弱い候補は減点
+    if (/テレコム|オフィス|センター|ビル|企業|展示場|ホール|会館|大学|学校|病院|駅前/i.test(text)) {
+        score -= 25;
+    }
+
+    // 有名・目的地感がある候補は加点
+    if (/東京タワー|スカイツリー|城|灯台|道の駅|展望台|絶景|温泉|神社|寺|湖|滝|渓谷|ダム|高原/i.test(text)) {
+        score += 18;
+    }
 
     if (group.name.includes("観光")) {
         if (/展望台|絶景|景勝地|道の駅|神社|寺|博物館|美術館|観光/i.test(text)) score += 18;
