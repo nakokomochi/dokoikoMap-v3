@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>履歴｜どこいこMap</title>
+  <meta name="description" content="どこいこMapで最近見つけたツーリングスポットの履歴を確認できます。">
+
+  <link rel="stylesheet" href="css/ChoiceYourRoad.css">
+  <link rel="stylesheet" href="css/history.css">
+  <link rel="icon" href="image/dog.png">
+</head>
+
+<body>
+  <div class="app">
+
+    <header class="header">
+      <a href="index.html">
+        <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
+      </a>
+
+      <h1 class="TitleName">
+        どこいこMap
+        <span class="subTitle">履歴</span>
+      </h1>
+    </header>
+
+            <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
+            aria-controls="mobileMenu">
+            ☰
+        </button>
+
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
+        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
+            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
+
+            <a href="index.html">TOP</a>
+            <a href="spot.html">スポット</a>
+            <a href="area.html">地名</a>
+
+            <div class="mobile-submenu-wrap">
+                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
+                    aria-controls="themeSubmenu">
+                    テーマ
+                </button>
+
+                <div class="mobile-submenu" id="themeSubmenu">
+                    <a href="theme.html">テーマ一覧</a>
+                    <a href="themes/gourmet.html">グルメ</a>
+                    <a href="themes/tourism.html">観光</a>
+                    <a href="themes/nature.html">自然</a>
+                    <a href="themes/goodRoad.html">気持ちよく走れる道</a>
+                </div>
+            </div>
+
+            <a href="history.html">履歴</a>
+            <a href="about.html">このサイトについて</a>
+            <a href="contact.html">お問い合わせ</a>
+        </nav>
+
+        <nav class="page-nav">
+            <button onclick="location.href='index.html'">TOP</button>
+            <button onclick="location.href='spot.html'">スポット</button>
+            <button class="active">地名</button>
+            <button onclick="location.href='theme.html'">テーマ</button>
+            <button onclick="location.href='history.html'">履歴</button>
+        </nav>
+
+    <main class="history-page">
+      <section class="history-hero">
+        <h2>わんこが最近見つけたスポット</h2>
+        <p>各ページで見つけた行き先を見返せます。</p>
+      </section>
+
+      <section id="historyList" class="history-list"></section>
+
+      <div class="history-actions">
+        <button id="clearHistoryBtn" class="clear-history-btn">
+          全履歴を削除
+        </button>
+
+        <button onclick="location.href='spot.html'" class="back-spot-btn">
+          スポット版に戻る
+        </button>
+      </div>
+    </main>
+
+  </div>
+
+  <script src="js/history.js"></script>
+  <script src="js/menu.js"></script>
+</body>
+</html>
