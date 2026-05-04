@@ -6,9 +6,6 @@ let startLng;
 let spotMarkers = [];
 let startAddressGlobal = "";
 
-const HIGHWAY_SPEED = 80; // km/h
-const LOCAL_SPEED = 40;
-
 const TOKYO_STATION_POSITION = {
     center: { lat: 35.681236, lng: 139.767125 },
     zoom: 12,
@@ -18,20 +15,21 @@ const TOKYO_STATION_POSITION = {
 const EXCLUDE_DISTANCE_KM = 3;
 let loadingTimer = null;
 
-// ルート判定用
-const ROUTE_CHECK_CANDIDATES = 5;
-const TIME_TOLERANCE_MINUTES = 20;
-const HARD_TIME_LIMIT_MARGIN = 40;
+const IMAGE_BASE_PATH = "../image";
+
+const MAX_POINT_ATTEMPTS = 8;
+const SEARCH_RADIUS_MIN = 5000;
+const SEARCH_RETRY_LIMIT = 1;
 
 // ===============================
 // Google Map 初期表示
 // ===============================
-function initMap() {
+window.initMap = function () {
     map = new google.maps.Map(
         document.getElementById("map"),
         TOKYO_STATION_POSITION
     );
-}
+};
 
 // ===============================
 // 検索開始
@@ -95,10 +93,10 @@ function clearResults() {
     resultsBox.classList.add("hidden");
 
     resultsBox.innerHTML = `
-        <div id="result1" class="result-item"></div>
-        <div id="result2" class="result-item"></div>
-        <div id="result3" class="result-item"></div>
-    `;
+<div id="result1" class="result-item"></div>
+<div id="result2" class="result-item"></div>
+<div id="result3" class="result-item"></div>
+`;
 
     if (loadingTimer) {
         clearInterval(loadingTimer);
@@ -112,6 +110,82 @@ function clearResults() {
     if (rerollButton) {
         rerollButton.classList.add("hidden");
     }
+}
+
+// ===============================
+// 最大距離計算
+// ===============================
+function maxDistanceByTime(time, highway) {
+    if (time <= 30) return 10;
+    if (time <= 60) return highway === "yes" ? 30 : 25;
+    if (time <= 90) return highway === "yes" ? 50 : 48;
+    if (time <= 120) return highway === "yes" ? 55 : 50;
+    if (time <= 150) return highway === "yes" ? 65 : 60;
+    if (time <= 180) return highway === "yes" ? 75 : 65;
+    return highway === "yes" ? 120 : 85;
+}
+
+// ===============================
+// 最小距離計算
+// ===============================
+function getMinDistanceByTime(maxDistance, time, highway) {
+    if (time === 30) return 0;
+    if (time === 60) return maxDistance * (highway === "yes" ? 0.30 : 0.25);
+    if (time === 90) return maxDistance * (highway === "yes" ? 0.45 : 0.40);
+    if (time === 120) return maxDistance * (highway === "yes" ? 0.55 : 0.50);
+    if (time === 150) return maxDistance * (highway === "yes" ? 0.65 : 0.60);
+    if (time === 180) return maxDistance * (highway === "yes" ? 0.75 : 0.65);
+    return 0;
+}
+
+// ===============================
+// 方角ベースの候補中心点生成
+// ===============================
+function createDirectionalPoint(lat, lng, minDistanceKm, maxDistanceKm) {
+    const safeMin = Math.max(0, minDistanceKm || 0);
+    const safeMax = Math.max(safeMin + 0.5, maxDistanceKm || safeMin + 0.5);
+
+    const targetDistanceKm = safeMin + Math.random() * (safeMax - safeMin);
+
+    const baseAngles = [
+        0,
+        Math.PI / 2,
+        Math.PI,
+        Math.PI * 1.5
+    ];
+
+    const baseAngle = baseAngles[Math.floor(Math.random() * baseAngles.length)];
+    const randomOffset = (Math.random() - 0.5) * (Math.PI / 180) * 50;
+    const angle = baseAngle + randomOffset;
+
+    const distanceInDegrees = targetDistanceKm / 111;
+
+    const newLat = lat + distanceInDegrees * Math.cos(angle);
+    const newLng = lng + distanceInDegrees * Math.sin(angle) / Math.cos(lat * Math.PI / 180);
+
+    return {
+        lat: newLat,
+        lng: newLng,
+        distanceKm: targetDistanceKm
+    };
+}
+
+// ===============================
+// 距離計算
+// ===============================
+function calcDistance(lat1, lng1, lat2, lng2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(lat1 * Math.PI / 180) *
+        Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) ** 2;
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
 
 // ===============================
@@ -132,26 +206,27 @@ function getSpotPhotoUrl(spot) {
 }
 
 // ===============================
-// タイプ整形
+// 自然タイプ整形
 // ===============================
 function formatNatureTypes(types = [], spotName = "") {
-    const joinedName = String(spotName || "");
+    const name = String(spotName || "");
 
-    if (joinedName.includes("滝")) return "滝";
-    if (joinedName.includes("湖") || joinedName.includes("沼")) return "湖";
-    if (joinedName.includes("渓谷")) return "渓谷";
-    if (joinedName.includes("高原")) return "高原";
-    if (joinedName.includes("展望台")) return "展望台";
-    if (joinedName.includes("ダム")) return "ダム";
-    if (joinedName.includes("海") || joinedName.includes("岬")) return "海・岬";
+    if (/滝/.test(name)) return "滝";
+    if (/湖|沼/.test(name)) return "湖・沼";
+    if (/渓谷|峡/.test(name)) return "渓谷";
+    if (/ダム/.test(name)) return "ダム";
+    if (/高原/.test(name)) return "高原";
+    if (/山|岳/.test(name)) return "山";
+    if (/海|岬|海岸/.test(name)) return "海・岬";
+    if (/公園/.test(name)) return "公園";
 
     const typeMap = {
         park: "公園",
         campground: "キャンプ場",
         tourist_attraction: "自然スポット",
-        natural_feature: "自然地形",
-        point_of_interest: "人気スポット",
-        establishment: "立ち寄りスポット"
+        natural_feature: "自然景勝地",
+        point_of_interest: "立ち寄りスポット",
+        establishment: "自然スポット"
     };
 
     const labels = types
@@ -170,14 +245,14 @@ function formatNatureTypes(types = [], spotName = "") {
 // ===============================
 function pickRandomMessage(messages) {
     if (!Array.isArray(messages) || messages.length === 0) {
-        return "気になる自然スポットです。";
+        return "自然を感じられそうなスポットです。";
     }
 
     return messages[Math.floor(Math.random() * messages.length)];
 }
 
 // ===============================
-// 軽い説明文
+// 自然版の説明文
 // ===============================
 function buildNatureCatchCopy(spot) {
     const rating = Number(spot?.rating || 0);
@@ -186,93 +261,119 @@ function buildNatureCatchCopy(spot) {
     const name = String(spot?.name || "");
     const text = `${name} ${types.join(" ")}`;
 
-    if (name.includes("滝")) {
+    if (/滝/.test(text)) {
         return pickRandomMessage([
-            "景色と空気感を楽しみに立ち寄りたくなる滝スポットです。",
-            "少し非日常感を味わいたい日に合いそうな滝候補です。",
-            "自然を感じながら寄り道しやすそうな滝スポットです。"
+            "水音や涼しさを感じに立ち寄りたくなる滝スポットです。",
+            "ツーリング途中のリフレッシュに良さそうな滝候補です。",
+            "自然感をしっかり味わえそうな寄り道先です。"
         ]);
     }
 
-    if (name.includes("湖") || name.includes("沼")) {
+    if (/湖|沼/.test(text)) {
         return pickRandomMessage([
-            "水辺の景色を眺めながらゆったりできそうな候補です。",
-            "のんびり景色を楽しみたい日に良さそうな水辺スポットです。",
-            "静かな景色を楽しみに立ち寄れそうな候補です。"
+            "景色を眺めながらひと息つけそうな湖スポットです。",
+            "水辺の空気感を楽しめそうな自然候補です。",
+            "のんびり走ったあとに立ち寄りたくなる湖まわりの候補です。"
         ]);
     }
 
-    if (name.includes("渓谷") || name.includes("高原")) {
+    if (/渓谷|峡/.test(text)) {
         return pickRandomMessage([
-            "自然をしっかり感じたい日に向いていそうな候補です。",
-            "景色を楽しみながら走る目的地として良さそうです。",
-            "空気感ごと楽しみに行きたくなる自然スポットです。"
+            "走る道中も景色も楽しめそうな渓谷スポットです。",
+            "自然の中で気分転換しやすそうな渓谷候補です。",
+            "ツーリングの目的地として雰囲気が良さそうな場所です。"
         ]);
     }
 
-    if (name.includes("展望台")) {
+    if (/ダム/.test(text)) {
         return pickRandomMessage([
-            "景色を見に走りたくなる展望スポットです。",
-            "ツーリング途中の寄り道先として相性が良さそうです。",
-            "走る楽しさに景色も足したくなる日に合いそうです。"
+            "バイクで立ち寄る目的地として相性が良さそうなダムです。",
+            "景色と休憩をまとめて楽しめそうなダム候補です。",
+            "ツーリング途中の寄り道先にしやすそうなダムスポットです。"
         ]);
     }
 
-    if (name.includes("ダム")) {
+    if (/高原|山|岳/.test(text)) {
         return pickRandomMessage([
-            "バイクの目的地として人気が出やすいダム候補です。",
-            "景色や雰囲気を楽しみながら立ち寄りやすそうなダムです。",
-            "走る途中の寄り道先としてちょうど良さそうなダム候補です。"
+            "空気感や景色を楽しみに走りたくなる自然スポットです。",
+            "少し遠出したい日に合いそうな高原・山方面の候補です。",
+            "走る楽しさと自然の景色を味わえそうな場所です。"
+        ]);
+    }
+
+    if (/海|岬|海岸/.test(text)) {
+        return pickRandomMessage([
+            "海沿いの景色を楽しみながら立ち寄りたくなる候補です。",
+            "開放感を味わいたい日に良さそうな自然スポットです。",
+            "ツーリングの目的地として気持ちよさそうな海辺の候補です。"
         ]);
     }
 
     if (types.includes("park")) {
         return pickRandomMessage([
-            "気軽に立ち寄って自然を感じやすそうなスポットです。",
-            "ひと息つきながら景色を楽しめそうな公園候補です。",
-            "ドライブ途中の寄り道先として使いやすそうです。"
+            "気軽に自然を感じながら休憩できそうな公園です。",
+            "ひと息つきたいツーリング途中に寄りやすそうです。",
+            "のんびり過ごしたい日にちょうど良さそうな自然候補です。"
         ]);
     }
 
     if (rating >= 4.2 && reviews >= 100) {
         return pickRandomMessage([
-            "評価も口コミ数も高めで、景色に期待できそうな人気スポットです。",
-            "人気があり、自然を感じる目的地として選びやすそうです。",
-            "満足感のある寄り道先になってくれそうな自然候補です。"
+            "評価も口コミ数も高めで、自然目的の寄り道先として期待できそうです。",
+            "人気があり、景色を楽しむ目的地として選びやすそうです。",
+            "満足感のある自然スポットになってくれそうな候補です。"
         ]);
     }
 
     if (rating >= 4.0) {
         return pickRandomMessage([
-            "自然を感じながら気分転換できそうなスポットです。",
-            "ドライブやツーリング途中に立ち寄りやすそうです。",
-            "景色を楽しみに寄ってみたくなる候補です。"
+            "自然を感じながら気分転換しやすそうな候補です。",
+            "ドライブやツーリング途中に立ち寄って楽しめそうです。",
+            "景色や空気感を味わいに行く候補として良さそうです。"
         ]);
     }
 
     return pickRandomMessage([
-        "気軽な自然寄りの寄り道先として良さそうです。",
-        "景色を見に行く候補として雰囲気が良さそうです。",
-        "次の目的地として立ち寄ってみたくなる自然スポットです。"
+        "自然を感じる寄り道先として見てみたくなる候補です。",
+        "ドライブやツーリング途中にひと息つけそうです。",
+        "次のリフレッシュスポット候補として雰囲気が良さそうです。"
     ]);
 }
 
 // ===============================
 // 履歴保存
 // ===============================
+const DOKOIKO_HISTORY_KEY = "dokoiko_history";
+const DOKOIKO_HISTORY_MAX = 6;
+
 function saveNatureHistoryItem(data) {
-    const key = "dokoiko_nature_history";
-    const current = JSON.parse(localStorage.getItem(key) || "[]");
+    let current = [];
 
-    const filtered = current.filter(item => item.placeId !== data.placeId);
+    try {
+        current = JSON.parse(localStorage.getItem(DOKOIKO_HISTORY_KEY) || "[]");
+    } catch (e) {
+        current = [];
+    }
 
-    filtered.unshift({
+    const historyItem = {
         savedAt: new Date().toISOString(),
+        sourceType: "nature",
+        sourceLabel: "自然版",
+        genreName: "自然",
+        placeId: data.placeId || data.place_id || data.name || "",
         ...data
+    };
+
+    const filtered = current.filter(item => {
+        return !(item.placeId === historyItem.placeId && item.sourceType === historyItem.sourceType);
     });
 
-    const trimmed = filtered.slice(0, 8);
-    localStorage.setItem(key, JSON.stringify(trimmed));
+    filtered.unshift(historyItem);
+
+    localStorage.setItem(
+        DOKOIKO_HISTORY_KEY,
+        JSON.stringify(filtered.slice(0, DOKOIKO_HISTORY_MAX))
+    );
 }
 
 // ===============================
@@ -290,7 +391,7 @@ function shareNatureResult(index) {
             title: "どこいこMap",
             text: shareText,
             url: shareUrl
-        }).catch(() => { });
+        }).catch(() => {});
         return;
     }
 
@@ -304,67 +405,7 @@ function shareNatureResult(index) {
 }
 
 // ===============================
-// ランダム座標生成（ドーナツ型）
-// ===============================
-function createRandomPoint(lat, lng, minDistanceKm, maxDistanceKm) {
-    const safeMin = Math.max(0, minDistanceKm || 0);
-    const safeMax = Math.max(safeMin + 0.5, maxDistanceKm || safeMin + 0.5);
-
-    const minR = safeMin / 111;
-    const maxR = safeMax / 111;
-
-    const u = Math.random();
-    const v = Math.random();
-
-    const r = Math.sqrt((maxR * maxR - minR * minR) * u + minR * minR);
-    const t = 2 * Math.PI * v;
-
-    const newLat = lat + r * Math.cos(t);
-    const newLng = lng + r * Math.sin(t) / Math.cos(lat * Math.PI / 180);
-
-    const distanceKm = r * 111;
-
-    return { lat: newLat, lng: newLng, distanceKm };
-}
-
-// ===============================
-// 最大距離計算
-// ===============================
-function maxDistanceByTime(time, highway) {
-    const hours = time / 60;
-    const speed = highway === "yes" ? HIGHWAY_SPEED : LOCAL_SPEED;
-    return hours * speed;
-}
-
-// ===============================
-// 最小距離計算（ドーナツ型用）
-// ===============================
-function getMinDistanceByTime(maxDistance, time, highway) {
-    if (time === 30) return 0;
-    if (time === 60) return maxDistance * 0.12;
-    if (time === 90) return maxDistance * 0.28;
-    if (time === 120) return maxDistance * 0.36;
-    return 0;
-}
-
-// ===============================
-// 距離計算
-// ===============================
-function calcDistance(lat1, lng1, lat2, lng2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLng / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-}
-
-// ===============================
-// バイカー向け自然スコア
+// 自然スコア
 // ===============================
 function getBikerNatureScore(place) {
     const name = place?.name || "";
@@ -374,19 +415,25 @@ function getBikerNatureScore(place) {
 
     let score = 0;
 
-    if (/展望台|絶景|景勝地/i.test(text)) score += 28;
-    if (/滝/i.test(text)) score += 22;
-    if (/湖|沼/i.test(text)) score += 18;
-    if (/渓谷/i.test(text)) score += 20;
-    if (/高原/i.test(text)) score += 22;
-    if (/海|岬|海岸/i.test(text)) score += 18;
-    if (/ダム/i.test(text)) score += 26;
-    if (/公園|自然公園|森林公園/i.test(text)) score += 14;
-    if (/park|campground|natural_feature|tourist_attraction/i.test(types)) score += 8;
+    if (/滝/i.test(text)) score += 28;
+    if (/湖|沼/i.test(text)) score += 24;
+    if (/渓谷|峡/i.test(text)) score += 26;
+    if (/ダム/i.test(text)) score += 22;
+    if (/高原/i.test(text)) score += 26;
+    if (/山|岳/i.test(text)) score += 18;
+    if (/海|岬|海岸/i.test(text)) score += 20;
+    if (/公園/i.test(text)) score += 14;
+    if (/展望台|絶景|景勝地/i.test(text)) score += 22;
 
-    // 立ち寄りやすさ・駐車っぽさ
-    if (/駐車場|パーキング|parking|大型車/i.test(text)) score += 16;
-    if (/展望台|公園|ダム|道の駅/i.test(text)) score += 8;
+    if (/park|campground|natural_feature|tourist_attraction|point_of_interest/i.test(types)) score += 10;
+
+    if (/駐車場|パーキング|parking|大型車/i.test(text)) score += 12;
+    if (/道の駅|ダム|公園|展望台/i.test(text)) score += 6;
+
+    // 自然っぽさが弱い候補を少し下げる
+    if (/オフィス|ビル|企業|学校|大学|病院|センター/i.test(text)) score -= 24;
+    if (/レストラン|カフェ|食堂|ラーメン|居酒屋/i.test(text)) score -= 10;
+    if (/ホテル|旅館/i.test(text)) score -= 8;
 
     return score;
 }
@@ -400,18 +447,38 @@ function isExcludedNature(place) {
     const types = Array.isArray(place?.types) ? place.types.join(" ") : "";
     const text = `${name} ${vicinity} ${types}`;
 
-    if (/ホテル|旅館/i.test(text) && !/高原|湖|滝|渓谷|海/.test(text)) return true;
+    if (/ラブホテル|ホテル街/i.test(text)) return true;
+    if (/night_club/i.test(types)) return true;
 
     return false;
 }
 
 // ===============================
-// 実ルート許容範囲
+// 距離スコア
 // ===============================
-function getRouteTimeRange(time) {
-    const min = Math.max(10, time - TIME_TOLERANCE_MINUTES);
-    const max = time + TIME_TOLERANCE_MINUTES;
-    return { min, max };
+function getDistanceScore(straightDistance, maxDistance, time) {
+    const ratio = straightDistance / maxDistance;
+
+    let idealMin = 0.4;
+    let idealMax = 0.8;
+
+    if (time >= 90) {
+        idealMin = 0.55;
+        idealMax = 0.9;
+    }
+
+    if (time >= 120) {
+        idealMin = 0.65;
+        idealMax = 0.95;
+    }
+
+    let score = 0;
+
+    if (ratio >= idealMin && ratio <= idealMax) score += 30;
+    if (ratio < idealMin) score -= 20;
+    if (ratio > idealMax) score -= 30;
+
+    return score;
 }
 
 // ===============================
@@ -446,15 +513,11 @@ function getRouteInfoToSpot(spot, highway) {
                     return;
                 }
 
-                const durationMinutes = Math.round(leg.duration.value / 60);
-                const distanceKm = Number((leg.distance.value / 1000).toFixed(1));
-
                 resolve({
-                    durationMinutes,
+                    durationMinutes: Math.round(leg.duration.value / 60),
                     durationText: leg.duration.text,
-                    distanceKm,
-                    distanceText: leg.distance.text,
-                    routeResult: result
+                    distanceKm: Number((leg.distance.value / 1000).toFixed(1)),
+                    distanceText: leg.distance.text
                 });
             }
         );
@@ -462,246 +525,195 @@ function getRouteInfoToSpot(spot, highway) {
 }
 
 // ===============================
-// ランダムポイント検索
+// 候補中心点を探す
 // ===============================
 function findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt = 0) {
-    if (attempt > 8) {
+    if (attempt > MAX_POINT_ATTEMPTS) {
         hideLoadingState();
-        alert("海に当たってしまいました、もう一度回してください");
+        alert("候補地を見つけられませんでした。もう一度まわしてみてね！");
         return;
     }
 
     const minDistance = getMinDistanceByTime(maxDistance, time, highway);
-    const point = createRandomPoint(startLat, startLng, minDistance, maxDistance);
+    const point = createDirectionalPoint(startLat, startLng, minDistance, maxDistance);
 
-    geocoder.geocode({ location: { lat: point.lat, lng: point.lng } }, function (results, status) {
-        if (status === "OK" && results[0]) {
-            let prefecture = "";
+    geocoder.geocode(
+        { location: { lat: point.lat, lng: point.lng } },
+        function (results, status) {
+            if (status === "OK" && results[0]) {
+                let prefecture = "";
 
-            for (const comp of results[0].address_components) {
-                if (comp.types.includes("administrative_area_level_1")) {
-                    prefecture = comp.long_name;
+                for (const comp of results[0].address_components) {
+                    if (comp.types.includes("administrative_area_level_1")) {
+                        prefecture = comp.long_name;
+                    }
+                }
+
+                if (prefecture) {
+                    searchThreeNature(point.lat, point.lng, point.distanceKm, time, highway);
+                    return;
                 }
             }
 
-            if (prefecture) {
-                searchThreeNature(point.lat, point.lng, point.distanceKm, time, highway);
-                return;
-            }
+            findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt + 1);
         }
-
-        findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway, attempt + 1);
-    });
+    );
 }
 
 // ===============================
-// 3つの自然検索
-// 1回検索して3件選ぶ方式 + 実ルート確認
+// 1回検索して3つの自然スポットを作る
 // ===============================
-function searchThreeNature(lat, lng, distance, time, highway) {
-    searchNearbyNature(lat, lng, distance, time, highway, 0, 0, function (selectedSpots) {
-        hideLoadingState();
+async function searchThreeNature(lat, lng, distance, time, highway) {
+    searchNearbyNatureOnce(lat, lng, distance, time, highway, async function (results) {
+        if (!results || results.length === 0) {
+            hideLoadingState();
 
-        if (!Array.isArray(selectedSpots) || selectedSpots.length === 0) {
             for (let i = 0; i < 3; i++) {
                 const box = document.getElementById(`result${i + 1}`);
-                if (box) {
-                    box.innerHTML = `<h3>🌿 自然</h3>見つかりませんでした`;
-                }
+                if (box) box.innerHTML = `<h3>🌳 自然</h3>見つかりませんでした`;
             }
+
             showResultWithEffect();
+
+            const rerollButton = document.getElementById("rerollButton");
+            if (rerollButton) rerollButton.classList.remove("hidden");
+
             return;
         }
 
-        selectedSpots.forEach((item, index) => {
-            renderNatureSpotCard(item, index, distance, time, highway);
-        });
+        const usedPlaceIds = new Set();
+        const maxDistance = maxDistanceByTime(time, highway);
 
-        for (let i = selectedSpots.length; i < 3; i++) {
-            const box = document.getElementById(`result${i + 1}`);
-            if (box) {
-                box.innerHTML = `<h3>🌿 自然</h3>見つかりませんでした`;
+        for (let index = 0; index < 3; index++) {
+            const box = document.getElementById(`result${index + 1}`);
+            if (!box) continue;
+
+            const spot = pickBestNatureSmart(results, usedPlaceIds, time, maxDistance);
+
+            if (!spot) {
+                box.innerHTML = `<h3>🌳 自然</h3>見つかりませんでした`;
+                continue;
             }
+
+            usedPlaceIds.add(spot.place_id);
+
+            const routeInfo = await getRouteInfoToSpot(spot, highway);
+
+            renderNatureResultCard(
+                box,
+                spot,
+                distance,
+                time,
+                highway,
+                index,
+                routeInfo
+            );
         }
 
+        hideLoadingState();
         showResultWithEffect();
 
         const rerollButton = document.getElementById("rerollButton");
-        if (rerollButton) {
-            rerollButton.classList.remove("hidden");
-        }
+        if (rerollButton) rerollButton.classList.remove("hidden");
     });
 }
 
 // ===============================
-// Places API検索（自然版）
-// 1回の検索結果から3件選ぶ
+// Places API検索：1回だけ回す
 // ===============================
-function searchNearbyNature(lat, lng, distance, time, highway, index, retry = 0, callback = null) {
+function searchNearbyNatureOnce(lat, lng, distance, time, highway, callback, retry = 0) {
     const service = new google.maps.places.PlacesService(map);
 
-    let radius = Math.max(distance * 1000, 5000);
+    let radius = Math.max(distance * 1000, SEARCH_RADIUS_MIN);
     if (retry === 1) radius *= 1.8;
-    if (retry === 2) radius *= 2.5;
 
-    const natureKeywordSets = [
-        ["絶景", "展望台", "景勝地", "ダム"],
-        ["滝", "渓谷", "清流"],
-        ["湖", "沼", "高原"],
-        ["自然公園", "森林公園", "ハイキング"],
-        ["海", "岬", "海岸"],
-        ["山", "登山口", "展望スポット"]
+    const keywordSets = [
+        "滝 湖 渓谷 ダム 高原 公園 展望台 絶景 山 海 岬 自然",
+        "自然公園 景勝地 キャンプ場 湖畔 渓流 展望",
+        "自然スポット 景色 リフレッシュ 立ち寄り"
     ];
 
-    let selectedKeywords;
-
-    if (retry === 0) {
-        selectedKeywords =
-            natureKeywordSets[Math.floor(Math.random() * natureKeywordSets.length)];
-    } else if (retry === 1) {
-        selectedKeywords = ["絶景", "滝", "湖", "公園", "ダム"];
-    } else if (retry === 2) {
-        selectedKeywords = ["自然", "景色", "展望"];
-    } else {
-        selectedKeywords = ["自然スポット"];
-    }
-
-    const keyword = selectedKeywords.join(" ");
+    const searchKeyword = keywordSets[Math.min(retry, keywordSets.length - 1)];
 
     service.nearbySearch(
         {
             location: { lat: lat, lng: lng },
             radius: radius,
-            keyword: keyword
+            keyword: searchKeyword
         },
-        async function (results, status) {
-            if (status !== google.maps.places.PlacesServiceStatus.OK || !results || results.length === 0) {
-                if (retry < 3) {
-                    searchNearbyNature(lat, lng, distance, time, highway, index, retry + 1, callback);
+        function (results, status) {
+            if (
+                status !== google.maps.places.PlacesServiceStatus.OK ||
+                !results ||
+                results.length === 0
+            ) {
+                if (retry < SEARCH_RETRY_LIMIT) {
+                    searchNearbyNatureOnce(lat, lng, distance, time, highway, callback, retry + 1);
                     return;
                 }
 
-                if (callback) callback([]);
+                callback([]);
                 return;
             }
 
-            let filtered = results.filter(place => {
+            const filtered = results.filter(place => {
                 if (!place || !place.place_id) return false;
+                if (!place.geometry || !place.geometry.location) return false;
                 if (isExcludedNature(place)) return false;
                 return true;
             });
 
-            let highRated = filtered.filter(r => (r.rating || 0) >= 4.0);
-            if (highRated.length > 0) filtered = highRated;
-            if (filtered.length === 0) filtered = results;
-
-            const uniqueMap = new Map();
-            filtered.forEach(place => {
-                if (place.place_id && !uniqueMap.has(place.place_id)) {
-                    uniqueMap.set(place.place_id, place);
-                }
-            });
-            filtered = Array.from(uniqueMap.values());
-
-            filtered.sort((a, b) => {
-                const scoreA =
-                    getBikerNatureScore(a) +
-                    Number(a.rating || 0) * 5 +
-                    Math.min(Number(a.user_ratings_total || 0), 300) * 0.05;
-
-                const scoreB =
-                    getBikerNatureScore(b) +
-                    Number(b.rating || 0) * 5 +
-                    Math.min(Number(b.user_ratings_total || 0), 300) * 0.05;
-
-                return scoreB - scoreA;
-            });
-
-            const top = filtered.slice(0, Math.max(ROUTE_CHECK_CANDIDATES, 8));
-            const checked = [];
-            const range = getRouteTimeRange(time);
-
-            for (const place of top) {
-                const routeInfo = await getRouteInfoToSpot(place, highway);
-                if (!routeInfo) continue;
-
-                checked.push({
-                    spot: place,
-                    routeInfo,
-                    durationMinutes: routeInfo.durationMinutes,
-                    diff: Math.abs(routeInfo.durationMinutes - time),
-                    inRange:
-                        routeInfo.durationMinutes >= range.min &&
-                        routeInfo.durationMinutes <= range.max
-                });
-            }
-
-            const hardLimitMinutes = time + HARD_TIME_LIMIT_MARGIN;
-
-            let withinHardLimit = checked.filter(item => {
-                return item.durationMinutes <= hardLimitMinutes;
-            });
-
-            let prioritized = withinHardLimit.filter(item => item.inRange);
-
-            const sortByNaturePriority = (a, b) => {
-                const scoreA =
-                    getBikerNatureScore(a.spot) +
-                    Number(a.spot.rating || 0) * 5 +
-                    Math.min(Number(a.spot.user_ratings_total || 0), 300) * 0.05;
-
-                const scoreB =
-                    getBikerNatureScore(b.spot) +
-                    Number(b.spot.rating || 0) * 5 +
-                    Math.min(Number(b.spot.user_ratings_total || 0), 300) * 0.05;
-
-                if (scoreB !== scoreA) return scoreB - scoreA;
-                return a.diff - b.diff;
-            };
-
-            if (prioritized.length > 0) {
-                prioritized.sort(sortByNaturePriority);
-            } else if (withinHardLimit.length > 0) {
-                prioritized = withinHardLimit.sort(sortByNaturePriority);
-            } else if (checked.length > 0) {
-                // 最後の保険。ただし大幅オーバーは切る
-                prioritized = checked
-                    .filter(item => item.durationMinutes <= time + 60)
-                    .sort(sortByNaturePriority);
-            } else {
-                prioritized = [];
-            }
-
-            const selectedSpots = [];
-            for (const item of prioritized) {
-                if (selectedSpots.length >= 3) break;
-
-                const plat = item.spot.geometry.location.lat();
-                const plng = item.spot.geometry.location.lng();
-
-                const tooClose = selectedSpots.some(selected => {
-                    const slat = selected.spot.geometry.location.lat();
-                    const slng = selected.spot.geometry.location.lng();
-                    return calcDistance(plat, plng, slat, slng) < EXCLUDE_DISTANCE_KM;
-                });
-
-                if (!tooClose) {
-                    selectedSpots.push(item);
-                }
-            }
-
-            if (selectedSpots.length < 3) {
-                for (const item of prioritized) {
-                    if (selectedSpots.length >= 3) break;
-                    if (!selectedSpots.some(s => s.spot.place_id === item.spot.place_id)) {
-                        selectedSpots.push(item);
-                    }
-                }
-            }
-
-            if (callback) callback(selectedSpots.slice(0, 3));
+            callback(filtered.length > 0 ? filtered : results);
         }
     );
+}
+
+// ===============================
+// 自然候補をスコアで選ぶ
+// ===============================
+function pickBestNatureSmart(results, usedPlaceIds, time, maxDistance) {
+    let candidates = results.filter(place => {
+        if (!place || !place.place_id) return false;
+        if (usedPlaceIds.has(place.place_id)) return false;
+        if (!place.geometry || !place.geometry.location) return false;
+        if (isExcludedNature(place)) return false;
+        return true;
+    });
+
+    if (candidates.length === 0) return null;
+
+    candidates.sort((a, b) => {
+        const aDistance = calcDistance(
+            startLat,
+            startLng,
+            a.geometry.location.lat(),
+            a.geometry.location.lng()
+        );
+
+        const bDistance = calcDistance(
+            startLat,
+            startLng,
+            b.geometry.location.lat(),
+            b.geometry.location.lng()
+        );
+
+        const aScore =
+            getBikerNatureScore(a) +
+            getDistanceScore(aDistance, maxDistance, time) +
+            Number(a.rating || 0) * 5 +
+            Math.min(Number(a.user_ratings_total || 0), 300) * 0.05;
+
+        const bScore =
+            getBikerNatureScore(b) +
+            getDistanceScore(bDistance, maxDistance, time) +
+            Number(b.rating || 0) * 5 +
+            Math.min(Number(b.user_ratings_total || 0), 300) * 0.05;
+
+        return bScore - aScore;
+    });
+
+    const top = candidates.slice(0, 6);
+    return top[Math.floor(Math.random() * Math.min(top.length, 3))] || top[0];
 }
 
 // ===============================
@@ -723,43 +735,48 @@ function buildGoogleMapsUrl(spot, highway) {
 }
 
 // ===============================
-// 自然スポット描画
+// 結果カード描画
 // ===============================
-function renderNatureSpotCard(item, index, distance, time, highway) {
-    const box = document.getElementById(`result${index + 1}`);
-    if (!box || !item || !item.spot) return;
-
-    const spot = item.spot;
-    const routeInfo = item.routeInfo || null;
-
+function renderNatureResultCard(box, spot, distance, time, highway, index, routeInfo = null) {
     const slat = spot.geometry.location.lat();
     const slng = spot.geometry.location.lng();
-
-    const directDistanceKm = calcDistance(startLat, startLng, slat, slng);
-
     const rating = spot.rating || "評価なし";
     const reviews = spot.user_ratings_total || 0;
     const photoUrl = getSpotPhotoUrl(spot);
     const typeLabel = formatNatureTypes(spot.types, spot.name);
     const catchCopy = buildNatureCatchCopy(spot);
-
     const mapUrl = buildGoogleMapsUrl(spot, highway);
 
     const shareText =
-        `${spot.name} を見つけたよ！ 🌿自然 / ⭐${rating} #どこいこMap`;
+        `${spot.name} を見つけたよ！ 🌳自然 / ⭐${rating} #どこいこMap`;
 
     const marker = new google.maps.Marker({
         position: { lat: slat, lng: slng },
         map: map,
         icon: {
-            url: "../image/green_dog.png",
+            url: `${IMAGE_BASE_PATH}/green_dog.png`,
             scaledSize: new google.maps.Size(50, 50)
         }
     });
+
     spotMarkers.push(marker);
 
-    const displayDistanceKm = routeInfo ? routeInfo.distanceKm : Number(directDistanceKm.toFixed(1));
-    const displayDistanceText = routeInfo ? routeInfo.distanceText : `約${directDistanceKm.toFixed(1)}km`;
+    const bounds = new google.maps.LatLngBounds();
+
+    if (startMarker && startMarker.getPosition) {
+        bounds.extend(startMarker.getPosition());
+    }
+
+    spotMarkers.forEach(m => {
+        if (m && m.getPosition) {
+            bounds.extend(m.getPosition());
+        }
+    });
+
+    map.fitBounds(bounds);
+
+    const displayDistanceKm = routeInfo ? routeInfo.distanceKm : Number(distance.toFixed(1));
+    const displayDistanceText = routeInfo ? routeInfo.distanceText : `約${distance.toFixed(1)}km`;
     const displayDurationText = routeInfo ? routeInfo.durationText : `${time}分以内`;
 
     saveNatureHistoryItem({
@@ -784,8 +801,8 @@ function renderNatureSpotCard(item, index, distance, time, highway) {
 
     box.innerHTML = `
 <div class="genre">
-<img src="../image/green_dog.png" class="genre-dog">
-🌿 自然</div>
+<img src="${IMAGE_BASE_PATH}/green_dog.png" class="genre-dog">
+🌳 自然</div>
 
 ${photoUrl ? `
 <div class="spot-photo-wrap">
@@ -794,7 +811,7 @@ ${photoUrl ? `
 ` : ""}
 
 <div class="spot-name">${spot.name}</div>
-<div class="spot-copy">${catchCopy || "気になる自然スポットです。"}</div>
+<div class="spot-copy">${catchCopy || "自然を感じられそうなスポットです。"}</div>
 
 📍 ${spot.vicinity || ""}<br>
 ⭐ ${rating} (${reviews}件)<br>
@@ -813,13 +830,6 @@ ${photoUrl ? `
 </button>
 </div>
 `;
-
-    const bounds = new google.maps.LatLngBounds();
-    if (startMarker && startMarker.getPosition) bounds.extend(startMarker.getPosition());
-    spotMarkers.forEach(m => {
-        if (m && m.getPosition) bounds.extend(m.getPosition());
-    });
-    map.fitBounds(bounds);
 }
 
 // ===============================
@@ -827,26 +837,36 @@ ${photoUrl ? `
 // ===============================
 function showResultWithEffect() {
     const box = document.getElementById("results");
+    if (!box) return;
+
     box.classList.remove("hidden");
     box.classList.remove("show");
+
     void box.offsetWidth;
+
     box.classList.add("show");
     launchConfetti();
 }
 
 // ===============================
-// ちょっとお祝い用エフェクト
+// 紙吹雪
 // ===============================
 function launchConfetti() {
     const colors = ["#ff7675", "#74b9ff", "#55efc4", "#ffeaa7", "#a29bfe"];
+
     for (let i = 0; i < 40; i++) {
         const confetti = document.createElement("div");
+
         confetti.classList.add("confetti");
         confetti.style.left = Math.random() * 100 + "vw";
         confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
         confetti.style.animationDuration = 2 + Math.random() * 2 + "s";
+
         document.body.appendChild(confetti);
-        setTimeout(() => { confetti.remove(); }, 4000);
+
+        setTimeout(() => {
+            confetti.remove();
+        }, 4000);
     }
 }
 
@@ -866,6 +886,7 @@ function rerollNature() {
 
     clearResults();
     showLoadingState("検索中...", "わんこが自然スポットを探してるよ");
+
     findValidPoint(startLat, startLng, maxDistance, geocoder, time, highway);
 }
 
@@ -912,14 +933,17 @@ function updateHighwayControl() {
 
 window.addEventListener("DOMContentLoaded", function () {
     const timeSelect = document.getElementById("timeSelect");
-    timeSelect.addEventListener("change", updateHighwayControl);
-    updateHighwayControl();
+
+    if (timeSelect) {
+        timeSelect.addEventListener("change", updateHighwayControl);
+        updateHighwayControl();
+    }
 });
 
 // ===============================
 // 検索中わんこ
 // ===============================
-function showLoadingState(message = "検索中...", subMessage = "わんこがわくわくの道を探してるよ") {
+function showLoadingState(message = "検索中...", subMessage = "わんこが自然スポットを探してるよ") {
     const resultsBox = document.getElementById("results");
     if (!resultsBox) return;
 
@@ -928,18 +952,18 @@ function showLoadingState(message = "検索中...", subMessage = "わんこが�
     resultsBox.classList.add("loading");
 
     resultsBox.innerHTML = `
-        <div id="loadingBox" class="loading-box">
-            <div class="loading-dog">
-                <img src="../image/dog.png" alt="検索中" class="loading-dog-image">
-            </div>
-            <div class="loading-text" id="loadingText">${message}</div>
-            <div class="loading-subtext">${subMessage}</div>
-        </div>
+<div id="loadingBox" class="loading-box">
+<div class="loading-dog">
+<img src="${IMAGE_BASE_PATH}/dog.png" alt="検索中" class="loading-dog-image">
+</div>
+<div class="loading-text" id="loadingText">${message}</div>
+<div class="loading-subtext">${subMessage}</div>
+</div>
 
-        <div id="result1" class="result-item"></div>
-        <div id="result2" class="result-item"></div>
-        <div id="result3" class="result-item"></div>
-    `;
+<div id="result1" class="result-item"></div>
+<div id="result2" class="result-item"></div>
+<div id="result3" class="result-item"></div>
+`;
 
     const texts = ["検索中...", "検索中 .", "検索中 ..", "検索中 ..."];
     let i = 0;
@@ -956,6 +980,9 @@ function showLoadingState(message = "検索中...", subMessage = "わんこが�
     }, 350);
 }
 
+// ===============================
+// 検索中解除
+// ===============================
 function hideLoadingState() {
     if (loadingTimer) {
         clearInterval(loadingTimer);
