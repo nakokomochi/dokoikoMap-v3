@@ -91,85 +91,95 @@
                 </div>
             </div>
 
+            <a href="history.html">履歴</a>
             <a href="about.html">このサイトについて</a>
             <a href="contact.html">お問い合わせ</a>
         </nav>
 
-        <nav class="page-nav">
-            <button onclick="location.href='index.html'">TOP</button>
-            <button class="active">スポット</button>
-            <button onclick="location.href='area.html'">地名</button>
-            <button onclick="location.href='theme.html'">テーマ</button>
-        </nav>
 
-        <section class="panel-top">
+            <div class="desktop-layout">
 
-            <label for="startLocation">出発地の住所：</label><br>
-            <input id="startLocation" type="text" placeholder="例：東京都渋谷区">
-            <br>
+                <nav class="page-nav">
+                    <button onclick="location.href='index.html'">TOP</button>
+                    <button class="active">スポット</button>
+                    <button onclick="location.href='area.html'">地名</button>
+                    <button onclick="location.href='theme.html'">テーマ</button>
+                    <button onclick="location.href='history.html'">履歴</button>
+                </nav>
 
-            <button onclick="getCurrentLocation()" class="location-btn">
-                📍 現在地を使用
-            </button>
+                <div class="main-area">
 
-            <p class="notice">
-                ※現在地は保存されません
-            </p>
+                    <section class="panel-top">
 
-            <label for="timeSelect">移動時間：</label>
-            <select id="timeSelect">
-                <option value="30">30分</option>
-                <option value="60">1時間</option>
-                <option value="90">1時間30分</option>
-                <option value="120">2時間</option>
-                <option value="150">2時間30分</option>
-                <option value="180">3時間</option>
-            </select>
+                        <label for="startLocation">出発地の住所：</label><br>
+                        <input id="startLocation" type="text" placeholder="例：東京都渋谷区">
+                        <br>
 
-            <br>
+                        <button onclick="getCurrentLocation()" class="location-btn">
+                            📍 現在地を使用
+                        </button>
 
-            <label for="highway">高速道路/有料道路：</label>
-            <select id="highway">
-                <option value="yes">使う</option>
-                <option value="no">使わない</option>
-            </select>
+                        <p class="notice">
+                            ※現在地は保存されません
+                        </p>
 
-            <br>
+                        <label for="timeSelect">移動時間：</label>
+                        <select id="timeSelect">
+                            <option value="30">30分</option>
+                            <option value="60">1時間</option>
+                            <option value="90">1時間30分</option>
+                            <option value="120">2時間</option>
+                            <option value="150">2時間30分</option>
+                            <option value="180">3時間</option>
+                        </select>
 
-            <button onclick="searchSpot()" class="main-button">
-                どこいこうかな！
-            </button>
+                        <br>
 
-            <div class="results hidden" id="results">
-                <div id="result1" class="result-item"></div>
-                <div id="result2" class="result-item"></div>
-                <div id="result3" class="result-item"></div>
+                        <label for="highway">高速道路/有料道路：</label>
+                        <select id="highway">
+                            <option value="yes">使う</option>
+                            <option value="no">使わない</option>
+                        </select>
+
+                        <br>
+
+                        <button onclick="searchSpot()" class="main-button">
+                            どこいこうかな！
+                        </button>
+
+                        <div class="results hidden" id="results">
+                            <div id="result1" class="result-item"></div>
+                            <div id="result2" class="result-item"></div>
+                            <div id="result3" class="result-item"></div>
+                        </div>
+
+                        <button id="rerollButton" onclick="rerollSpot()" class="reroll-btn hidden">
+                            🎲 もう一回まわす
+                        </button>
+
+                    </section>
+
+                    <section class="panel-map">
+                        <div id="map"></div>
+                    </section>
+
+                    <footer class="footer">
+                        <p>© どこいこMap</p>
+                        <a href="about.html">このサイトについて</a> |
+                        <a href="contact.html">お問い合わせ</a>
+                    </footer>
+
+                </div>
+
             </div>
 
-            <button id="rerollButton" onclick="rerollSpot()" class="reroll-btn hidden">
-                🎲 もう一回まわす
-            </button>
+            <script src="js/spot.js?v=3.2"></script>
+            <script src="js/menu.js"></script>
+            <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap" async
+                defer>
+                </script>
 
-        </section>
-
-        <section class="panel-map">
-            <div id="map"></div>
-        </section>
-
-        <footer class="footer">
-            <p>© どこいこMap</p>
-            <a href="about.html">このサイトについて</a> |
-            <a href="contact.html">お問い合わせ</a>
-        </footer>
-
-        <script src="js/spot.js?v=3.2"></script>
-        <script src="js/menu.js"></script>
-        <script
-            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyADU3rpPRFLqIm4PBKx8M3xl6WYcoCrhVw&libraries=places&callback=initMap"
-            async defer>
-            </script>
-
-    </div>
+        </div>
 </body>
 
 </html>
