@@ -363,3 +363,107 @@ button{
 .mobile-submenu a {
   margin-left: 12px;
 }
+
+/* =========================
+🏁 index 改善：メインCTA
+========================= */
+
+.sp-only {
+  display: none;
+}
+
+.main-cta {
+  margin-top: 22px;
+  padding: 18px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+  border: 2px solid rgba(255, 140, 0, 0.28);
+  box-shadow: 0 10px 24px rgba(255, 140, 0, 0.14);
+}
+
+.main-cta-label {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #fff0df;
+  color: #d85f00;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.main-cta-button {
+  margin-top: 0;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(255, 106, 0, 0.28);
+}
+
+.main-cta-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #777;
+}
+
+.primary-card {
+  position: relative;
+  border: 2px solid rgba(255, 106, 0, 0.42);
+  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.07),
+    0 16px 32px rgba(255, 140, 0, 0.18);
+}
+
+.recommended-label {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: linear-gradient(45deg, #ff6a00, #ff8c00);
+  color: #fff;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.primary-card h2 {
+  font-size: 26px;
+}
+
+.primary-card button {
+  font-weight: bold;
+  font-size: 18px;
+}
+
+/* スマホ最適化 */
+@media (max-width: 768px) {
+  .sp-only {
+    display: block;
+  }
+
+  .header {
+    padding: 28px 18px 20px;
+    margin: 14px 14px 0;
+  }
+
+  .catch {
+    font-size: 22px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+  }
+
+  .main-cta {
+    padding: 16px;
+  }
+
+  .main-cta-button {
+    padding: 18px;
+    font-size: 18px;
+  }
+
+  .primary-card h2 {
+    font-size: 24px;
+  }
+}
