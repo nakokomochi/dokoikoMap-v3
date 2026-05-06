@@ -6,6 +6,7 @@ let startLat;
 let startLng;
 let spotMarkers = [];
 let startAddressGlobal = "";
+let startPrefectureGlobal = "";
 
 const HIGHWAY_SPEED = 80;
 const LOCAL_SPEED = 40;
@@ -26,8 +27,9 @@ const SEARCH_RADIUS_MIN = 5000;
 const SEARCH_RETRY_LIMIT = 1;
 
 // ルート判定用
-const ROUTE_CHECK_CANDIDATES_PER_GENRE = 1;
+const ROUTE_CHECK_CANDIDATES_PER_GENRE = 3;
 const TIME_TOLERANCE_MINUTES = 20;
+const USE_DIRECTIONS_FROM_MINUTES = 60;
 
 // ===============================
 // Google Map 初期表示
@@ -68,6 +70,7 @@ function searchSpot() {
 
         startLat = results[0].geometry.location.lat();
         startLng = results[0].geometry.location.lng();
+        startPrefectureGlobal = getPrefectureFromGeocodeResult(results[0]);
 
         const startPos = { lat: startLat, lng: startLng };
 
@@ -183,14 +186,27 @@ function createDirectionalPoint(lat, lng, minDistanceKm, maxDistanceKm) {
 
 
 // ===============================
+// 候補地の選出半径の設定
+// ===============================
 function maxDistanceByTime(time, highway) {
-    if (time <= 30) return 10;
-    if (time <= 60) return highway === "yes" ? 30 : 25;
-    if (time <= 90) return highway === "yes" ? 50 : 48;
-    if (time <= 120) return highway === "yes" ? 55 : 50;
-    if (time <= 150) return highway === "yes" ? 65 : 60;
-    if (time <= 180) return highway === "yes" ? 75 : 65;
-    return highway === "yes" ? 120 : 85;
+    if (highway === "yes") {
+        if (time <= 30) return 10;
+        if (time <= 60) return 35;
+        if (time <= 90) return 60;
+        if (time <= 120) return 85;
+        if (time <= 150) return 110;
+        if (time <= 180) return 135;
+        return 150;
+    }
+
+    // 下道のみ：かなり控えめ
+    if (time <= 30) return 8;
+    if (time <= 60) return 18;
+    if (time <= 90) return 28;
+    if (time <= 120) return 38;
+    if (time <= 150) return 48;
+    if (time <= 180) return 58;
+    return 70;
 }
 
 // ===============================
@@ -198,11 +214,22 @@ function maxDistanceByTime(time, highway) {
 // ===============================
 function getMinDistanceByTime(maxDistance, time, highway) {
     if (time === 30) return 0;
-    if (time === 60) return maxDistance * (highway === "yes" ? 0.30 : 0.25);
-    if (time === 90) return maxDistance * (highway === "yes" ? 0.45 : 0.40);
-    if (time === 120) return maxDistance * (highway === "yes" ? 0.55 : 0.50);
-    if (time === 150) return maxDistance * (highway === "yes" ? 0.65 : 0.60);
-    if (time === 180) return maxDistance * (highway === "yes" ? 0.75 : 0.65);
+
+    if (highway === "yes") {
+        if (time === 60) return maxDistance * 0.55;
+        if (time === 90) return maxDistance * 0.60;
+        if (time === 120) return maxDistance * 0.65;
+        if (time === 150) return maxDistance * 0.70;
+        if (time === 180) return maxDistance * 0.72;
+    }
+
+    // 下道のみ
+    if (time === 60) return maxDistance * 0.25;
+    if (time === 90) return maxDistance * 0.35;
+    if (time === 120) return maxDistance * 0.45;
+    if (time === 150) return maxDistance * 0.50;
+    if (time === 180) return maxDistance * 0.55;
+
     return 0;
 }
 
@@ -221,6 +248,73 @@ function calcDistance(lat1, lng1, lat2, lng2) {
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+}
+
+// ===============================
+// 都道府県取得
+// ===============================
+function getPrefectureFromGeocodeResult(result) {
+    if (!result || !result.address_components) return "";
+
+    for (const comp of result.address_components) {
+        if (comp.types.includes("administrative_area_level_1")) {
+            return comp.long_name;
+        }
+    }
+
+    return "";
+}
+
+// ===============================
+// 同じ都道府県っぽいか判定
+// ===============================
+function isLikelySamePrefecture(place) {
+    if (!startPrefectureGlobal || !place) return false;
+
+    const text = `${place.name || ""} ${place.vicinity || ""}`;
+
+    return text.includes(startPrefectureGlobal);
+}
+
+function getRegionName(prefecture) {
+    const regions = {
+        kanto: ["東京都", "神奈川県", "埼玉県", "千葉県", "茨城県", "栃木県", "群馬県"],
+        kansai: ["大阪府", "京都府", "兵庫県", "奈良県", "滋賀県", "和歌山県"]
+    };
+
+    for (const regionName in regions) {
+        if (regions[regionName].includes(prefecture)) {
+            return regionName;
+        }
+    }
+
+    return "";
+}
+
+// ===============================
+// 高速あり時の県内候補減点
+// ===============================
+function getPrefectureScore(place, highway) {
+    if (highway !== "yes") return 0;
+
+    const text = `${place.name || ""} ${place.vicinity || ""}`;
+    const startRegion = getRegionName(startPrefectureGlobal);
+
+    // 都道府県名が分かる場合：同県は強く減点
+    if (startPrefectureGlobal && text.includes(startPrefectureGlobal)) {
+        return -45;
+    }
+
+    // 関東・関西など、同じ大都市圏っぽい候補は少し減点
+    if (startRegion === "kanto") {
+        if (/東京都|神奈川県|埼玉県|千葉県/.test(text)) return -25;
+    }
+
+    if (startRegion === "kansai") {
+        if (/大阪府|京都府|兵庫県|奈良県|滋賀県|和歌山県/.test(text)) return -25;
+    }
+
+    return 15;
 }
 
 // ===============================
@@ -479,9 +573,25 @@ function getSpotGenreGroups() {
 // 実ルート許容範囲
 // ===============================
 function getRouteTimeRange(time) {
+    if (time <= 30) {
+        return { min: 15, max: 45 };
+    }
+
+    if (time <= 60) {
+        return { min: 45, max: 75 };
+    }
+
+    if (time <= 90) {
+        return { min: 65, max: 110 };
+    }
+
+    if (time <= 120) {
+        return { min: 90, max: 145 };
+    }
+
     return {
-        min: Math.max(10, time * 0.5),
-        max: time
+        min: Math.max(30, time - 35),
+        max: time + 35
     };
 }
 
@@ -536,48 +646,65 @@ function getRouteInfoToSpot(spot, highway) {
 }
 
 // ===============================
+// 候補距離レンジ
+// ===============================
+function getCandidateDistanceRange(time, highway, maxDistance) {
+    if (time <= 30) {
+        return { min: 0, max: maxDistance };
+    }
+
+    if (highway === "yes") {
+        return {
+            min: maxDistance * 0.55,
+            max: maxDistance * 1.05
+        };
+    }
+
+    return {
+        min: maxDistance * 0.25,
+        max: maxDistance * 1.05
+    };
+}
+
+// ===============================
 // 軽量版：Directionsを使わずに候補を選ぶ
 // ===============================
-function pickBestSpotForGenreSmart(results, group, usedPlaceIds, time, maxDistance) {
+function pickBestSpotForGenreSmart(results, group, usedPlaceIds, time, maxDistance, highway) {
+    const range = getCandidateDistanceRange(time, highway, maxDistance);
 
     let candidates = results.filter(place => {
         if (!place || !place.place_id) return false;
         if (usedPlaceIds.has(place.place_id)) return false;
         if (!place.geometry || !place.geometry.location) return false;
-        return true;
-    });
 
-    if (candidates.length === 0) return null;
-
-    // ① まず一番遠い候補を探す
-    candidates.sort((a, b) => {
-        const da = calcDistance(startLat, startLng, a.geometry.location.lat(), a.geometry.location.lng());
-        const db = calcDistance(startLat, startLng, b.geometry.location.lat(), b.geometry.location.lng());
-        return db - da;
-    });
-
-    const farSpot = candidates[0];
-
-    const baseDistance = calcDistance(
-        startLat,
-        startLng,
-        farSpot.geometry.location.lat(),
-        farSpot.geometry.location.lng()
-    );
-
-    // ② その距離以内だけ残す
-    candidates = candidates.filter(place => {
-        const d = calcDistance(
+        const distance = calcDistance(
             startLat,
             startLng,
             place.geometry.location.lat(),
             place.geometry.location.lng()
         );
 
-        return d <= baseDistance;
+        // 高速ありで近すぎる候補を除外
+        if (distance < range.min) return false;
+
+        // 遠すぎる候補も除外
+        if (distance > range.max) return false;
+
+        return true;
     });
 
-    // ③ スコアで選ぶ（ジャンル点 + 距離点）
+    // 厳しすぎて0件になったときだけ緩める
+    if (candidates.length === 0) {
+        candidates = results.filter(place => {
+            if (!place || !place.place_id) return false;
+            if (usedPlaceIds.has(place.place_id)) return false;
+            if (!place.geometry || !place.geometry.location) return false;
+            return true;
+        });
+    }
+
+    if (candidates.length === 0) return null;
+
     candidates.sort((a, b) => {
         const aDistance = calcDistance(
             startLat,
@@ -595,55 +722,56 @@ function pickBestSpotForGenreSmart(results, group, usedPlaceIds, time, maxDistan
 
         const aScore =
             getGenreScore(a, group, time) +
-            getDistanceScore(aDistance, maxDistance, time);
+            getDistanceScore(aDistance, maxDistance, time, highway) +
+            getPrefectureScore(a, highway);
 
         const bScore =
             getGenreScore(b, group, time) +
-            getDistanceScore(bDistance, maxDistance, time);
+            getDistanceScore(bDistance, maxDistance, time, highway) +
+            getPrefectureScore(b, highway);
 
         return bScore - aScore;
     });
 
     const top = candidates.slice(0, 6);
-
     return top[Math.floor(Math.random() * Math.min(top.length, 3))] || top[0];
 }
 
 // ===============================
 // 距離スコア：選択時間に合いそうな距離を優先
 // ===============================
-function getDistanceScore(straightDistance, maxDistance, time) {
+function getDistanceScore(straightDistance, maxDistance, time, highway = "no") {
     const ratio = straightDistance / maxDistance;
 
     let score = 0;
 
-    // 🎯 理想ゾーン（ここが命）
     let idealMin = 0.6;
     let idealMax = 0.9;
 
     if (time <= 60) {
-        idealMin = 0.4;
-        idealMax = 0.8;
+        idealMin = highway === "yes" ? 0.55 : 0.35;
+        idealMax = highway === "yes" ? 0.95 : 0.75;
     }
 
     if (time >= 120) {
-        idealMin = 0.65;
-        idealMax = 0.95;
+        idealMin = highway === "yes" ? 0.65 : 0.45;
+        idealMax = highway === "yes" ? 1.0 : 0.85;
     }
 
-    // 理想ゾーン
     if (ratio >= idealMin && ratio <= idealMax) {
-        score += 30;
+        score += 35;
     }
 
-    // 近すぎ
     if (ratio < idealMin) {
-        score -= 20;
+        score -= highway === "yes" ? 30 : 10;
     }
 
-    // 遠すぎ
     if (ratio > idealMax) {
-        score -= 30;
+        score -= highway === "yes" ? 20 : 35;
+    }
+
+    if (ratio > 1.0) {
+        score -= 60;
     }
 
     return score;
@@ -652,26 +780,52 @@ function getDistanceScore(straightDistance, maxDistance, time) {
 // ===============================
 // 実ルートで候補を選ぶ
 // ===============================
-async function pickBestSpotForGenreByRoute(results, group, usedPlaceIds, time, highway) {
+async function pickBestSpotForGenreByRoute(results, group, usedPlaceIds, time, highway, maxDistance) {
+    const range = getRouteTimeRange(time);
+    const distanceRange = getCandidateDistanceRange(time, highway, maxDistance);
+
     let candidates = results.filter(place => {
-        return place.place_id && !usedPlaceIds.has(place.place_id);
+        if (!place || !place.place_id) return false;
+        if (usedPlaceIds.has(place.place_id)) return false;
+        if (!place.geometry || !place.geometry.location) return false;
+
+        const distance = calcDistance(
+            startLat,
+            startLng,
+            place.geometry.location.lat(),
+            place.geometry.location.lng()
+        );
+
+        if (distance < distanceRange.min) return false;
+        if (distance > distanceRange.max) return false;
+
+        return true;
     });
 
-    if (candidates.length === 0) {
-        return null;
-    }
+    if (candidates.length === 0) return null;
 
     candidates.sort((a, b) => {
-        return getGenreScore(b, group, time) - getGenreScore(a, group, time);
+        const aDistance = calcDistance(startLat, startLng, a.geometry.location.lat(), a.geometry.location.lng());
+        const bDistance = calcDistance(startLat, startLng, b.geometry.location.lat(), b.geometry.location.lng());
+
+        const aScore =
+            getGenreScore(a, group, time) +
+            getDistanceScore(aDistance, maxDistance, time, highway) +
+            getPrefectureScore(a, highway);
+
+        const bScore =
+            getGenreScore(b, group, time) +
+            getDistanceScore(bDistance, maxDistance, time, highway) +
+            getPrefectureScore(b, highway);
+
+        return bScore - aScore;
     });
 
     const topCandidates = candidates.slice(0, ROUTE_CHECK_CANDIDATES_PER_GENRE);
-    const range = getRouteTimeRange(time);
     const checked = [];
 
     for (const spot of topCandidates) {
         const routeInfo = await getRouteInfoToSpot(spot, highway);
-
         if (!routeInfo) continue;
 
         const diff = Math.abs(routeInfo.durationMinutes - time);
@@ -689,19 +843,8 @@ async function pickBestSpotForGenreByRoute(results, group, usedPlaceIds, time, h
     const valid = checked.filter(item => item.inRange);
 
     if (valid.length > 0) {
-        valid.sort((a, b) => {
-            if (a.diff !== b.diff) return a.diff - b.diff;
-            return getGenreScore(b.spot, group, time) - getGenreScore(a.spot, group, time);
-        });
+        valid.sort((a, b) => a.diff - b.diff);
         return valid[0];
-    }
-
-    if (checked.length > 0) {
-        checked.sort((a, b) => {
-            if (a.diff !== b.diff) return a.diff - b.diff;
-            return getGenreScore(b.spot, group, time) - getGenreScore(a.spot, group, time);
-        });
-        return checked[0];
     }
 
     return null;
@@ -743,13 +886,32 @@ async function searchThreeGenres(lat, lng, distance, time, highway) {
 
             if (!box) continue;
 
-            const spot = pickBestSpotForGenreSmart(
-                results,
-                group,
-                usedPlaceIds,
-                time,
-                maxDistance
-            );
+            let pickedData = null;
+
+            if (time >= USE_DIRECTIONS_FROM_MINUTES) {
+                pickedData = await pickBestSpotForGenreByRoute(
+                    results,
+                    group,
+                    usedPlaceIds,
+                    time,
+                    highway,
+                    maxDistance
+                );
+            }
+
+            let spot = pickedData ? pickedData.spot : null;
+            let routeInfo = pickedData ? pickedData.routeInfo : null;
+
+            if (!spot) {
+                spot = pickBestSpotForGenreSmart(
+                    results,
+                    group,
+                    usedPlaceIds,
+                    time,
+                    maxDistance,
+                    highway
+                );
+            }
 
             if (!spot) {
                 box.innerHTML = `
@@ -762,8 +924,6 @@ async function searchThreeGenres(lat, lng, distance, time, highway) {
 
             usedPlaceIds.add(spot.place_id);
 
-            // Directionsは表示用に1件だけ
-            const routeInfo = await getRouteInfoToSpot(spot, highway);
 
             renderSpotResultCard(
                 box,
