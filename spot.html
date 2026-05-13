@@ -97,89 +97,96 @@
         </nav>
 
 
-            <div class="desktop-layout">
+        <div class="desktop-layout">
 
-                <nav class="page-nav">
-                    <button onclick="location.href='index.html'">TOP</button>
-                    <button class="active">スポット</button>
-                    <button onclick="location.href='area.html'">地名</button>
-                    <button onclick="location.href='theme.html'">目的</button>
-                    <button onclick="location.href='history.html'">履歴</button>
-                </nav>
+            <nav class="page-nav">
+                <button onclick="location.href='index.html'">TOP</button>
+                <button class="active">スポット</button>
+                <button onclick="location.href='area.html'">地名</button>
+                <button onclick="location.href='theme.html'">目的</button>
+                <button onclick="location.href='history.html'">履歴</button>
+            </nav>
 
-                <div class="main-area">
+            <div class="main-area">
 
-                    <section class="panel-top">
+                <section class="panel-top">
 
-                        <label for="startLocation">出発地の住所：</label><br>
-                        <input id="startLocation" type="text" placeholder="例：渋谷区、近所のコンビニ名">
-                        <br>
+                    <label for="startLocation">出発地の住所：</label><br>
+                    <input id="startLocation" type="text" placeholder="例：渋谷区、近所のコンビニ名">
+                    <br>
 
-                        <button onclick="getCurrentLocation()" class="location-btn">
-                            📍 現在地を使用
-                        </button>
+                    <button onclick="getCurrentLocation()" class="location-btn">
+                        📍 現在地を使用
+                    </button>
 
-                        <p class="notice">
-                            ※現在地は保存されません
-                        </p>
+                    <p class="notice">
+                        ※現在地は保存されません
+                    </p>
 
-                        <label for="timeSelect">移動時間：</label>
-                        <select id="timeSelect">
-                            <option value="30">30分</option>
-                            <option value="60">1時間</option>
-                            <option value="90">1時間30分</option>
-                            <option value="120">2時間</option>
-                            <option value="150">2時間30分</option>
-                            <option value="180">3時間</option>
-                        </select>
+                    <label for="timeSelect">移動時間：</label>
+                    <select id="timeSelect">
+                        <option value="30">30分</option>
+                        <option value="60">1時間</option>
+                        <option value="90">1時間30分</option>
+                        <option value="120">2時間</option>
+                        <option value="150">2時間30分</option>
+                        <option value="180">3時間</option>
+                    </select>
 
-                        <br>
+                    <br>
 
-                        <label for="highway">高速道路/有料道路：</label>
-                        <select id="highway">
-                            <option value="yes">使う</option>
-                            <option value="no">使わない</option>
-                        </select>
+                    <label for="highway">高速道路/有料道路：</label>
+                    <select id="highway">
+                        <option value="yes">使う</option>
+                        <option value="no">使わない</option>
+                    </select>
 
-                        <br>
+                    <br>
 
-                        <button onclick="searchSpot()" class="main-button">
-                            どこいこうかな！
-                        </button>
+                    <button onclick="searchSpot()" class="main-button">
+                        どこいこうかな！
+                    </button>
 
-                        <div class="results hidden" id="results">
-                            <div id="result1" class="result-item"></div>
-                            <div id="result2" class="result-item"></div>
-                            <div id="result3" class="result-item"></div>
-                        </div>
+                    <div class="results hidden" id="results">
+                        <div id="result1" class="result-item"></div>
+                        <div id="result2" class="result-item"></div>
+                        <div id="result3" class="result-item"></div>
+                    </div>
 
-                        <button id="rerollButton" onclick="rerollSpot()" class="reroll-btn hidden">
-                            🎲 もう一回まわす
-                        </button>
+                    <button id="rerollButton" onclick="rerollSpot()" class="reroll-btn hidden">
+                        🎲 もう一回まわす
+                    </button>
 
-                    </section>
+                </section>
 
-                    <section class="panel-map">
-                        <div id="map"></div>
-                    </section>
+                <section class="panel-map">
 
-                    <footer class="footer">
-                        <p>© どこいこMap</p>
-                        <a href="about.html">このサイトについて</a> |
-                        <a href="contact.html">お問い合わせ</a>
-                    </footer>
+                    <p class="map-tip">
+                         わんこピンをタップするとスポット詳細が見れます!
+                    </p>
 
-                </div>
+                    <div id="map"></div>
+                </section>
+
+
+                <footer class="footer">
+                    <p>© どこいこMap</p>
+                    <a href="about.html">このサイトについて</a> |
+                    <a href="contact.html">お問い合わせ</a>
+                </footer>
 
             </div>
 
-            <script src="js/spot.js?v=3.5"></script>
-            <script src="js/menu.js"></script>
-            <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC46ImAYGQdDnN6gE6k25CCkemuCU5DXJ8&libraries=places&callback=initMap" async
-                defer>
-                </script>
-
         </div>
+
+        <script src="js/spot.js?v=3.5"></script>
+        <script src="js/menu.js"></script>
+        <script
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC46ImAYGQdDnN6gE6k25CCkemuCU5DXJ8&libraries=places&callback=initMap"
+            async defer>
+            </script>
+
+    </div>
 </body>
 
 </html>
