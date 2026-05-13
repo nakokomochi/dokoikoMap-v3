@@ -4,6 +4,7 @@ let startMarker;
 let startLat;
 let startLng;
 let spotMarkers = [];
+let currentInfoWindow = null;
 let startAddressGlobal = "";
 
 const HIGHWAY_SPEED = 80;
@@ -110,6 +111,11 @@ function clearResults() {
 
     spotMarkers.forEach(m => m.setMap(null));
     spotMarkers = [];
+
+    if (currentInfoWindow) {
+        currentInfoWindow.close();
+        currentInfoWindow = null;
+    }
 
     const rerollButton = document.getElementById("rerollButton");
     if (rerollButton) {
@@ -324,7 +330,7 @@ function shareTourismResult(index) {
             title: "どこいこMap",
             text: shareText,
             url: shareUrl
-        }).catch(() => {});
+        }).catch(() => { });
         return;
     }
 
@@ -739,6 +745,25 @@ function buildGoogleMapsUrl(spot, highway) {
 }
 
 // ===============================
+// 地図わんこタップで表示
+// ===============================
+function scrollToTourismResultCard(index) {
+    const card = document.getElementById(`result${index + 1}`);
+    if (!card) return;
+
+    card.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+    });
+
+    card.classList.add("result-card-highlight");
+
+    setTimeout(() => {
+        card.classList.remove("result-card-highlight");
+    }, 1200);
+}
+
+// ===============================
 // 結果カード描画
 // ===============================
 function renderTourismResultCard(box, spot, distance, time, highway, index, routeInfo = null) {
@@ -754,13 +779,37 @@ function renderTourismResultCard(box, spot, distance, time, highway, index, rout
     const shareText =
         `${spot.name} を見つけたよ！ 🏯観光 / ⭐${rating} #どこいこMap`;
 
+    const infoRatingText = spot.rating ? `⭐${spot.rating}` : "評価なし";
+
     const marker = new google.maps.Marker({
         position: { lat: slat, lng: slng },
         map: map,
         icon: {
             url: `${IMAGE_BASE_PATH}/yellow_dog.png`,
             scaledSize: new google.maps.Size(50, 50)
+        },
+        title: spot.name
+    });
+
+    const infoWindow = new google.maps.InfoWindow({
+        content: `
+        <div class="dog-pin-info">
+            <div class="dog-pin-info-title">${spot.name}</div>
+            <div class="dog-pin-info-rating">${infoRatingText}</div>
+            <button type="button" class="dog-pin-info-button" onclick="scrollToTourismResultCard(${index})">
+                詳細を見る
+            </button>
+        </div>
+    `
+    });
+
+    marker.addListener("click", () => {
+        if (currentInfoWindow) {
+            currentInfoWindow.close();
         }
+
+        infoWindow.open(map, marker);
+        currentInfoWindow = infoWindow;
     });
 
     spotMarkers.push(marker);
