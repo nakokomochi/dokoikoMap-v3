@@ -554,7 +554,7 @@ margin: 10px auto;
 
 .result-item {
   width: 95%;
-  max-width: 420px;
+  max-width: 800px;
   background: white;
   color: #2d3436;
   border-radius: 16px;
@@ -985,6 +985,7 @@ margin:0 auto 6px auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  font-size: 0.95rem;
 }
 
 .share-button {
@@ -993,4 +994,54 @@ margin:0 auto 6px auto;
   padding: 10px 14px;
   font-size: 0.95rem;
   cursor: pointer;
+}
+
+.dog-pin-info {
+    max-width: 180px;
+    padding: 4px 2px;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.dog-pin-info-title {
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.dog-pin-info-rating {
+    margin-bottom: 6px;
+    color: #555;
+}
+
+.dog-pin-info-button {
+    width: 100%;
+    border: none;
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: var(--accent-color, #ff8c00);
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.result-card-highlight {
+    animation: resultCardHighlight 1.2s ease;
+}
+
+@keyframes resultCardHighlight {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255, 140, 0, 0);
+    }
+
+    35% {
+        transform: scale(1.02);
+        box-shadow: 0 0 18px rgba(255, 140, 0, 0.45);
+    }
+
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(255, 140, 0, 0);
+    }
 }
