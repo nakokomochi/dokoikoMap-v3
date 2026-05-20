@@ -228,19 +228,23 @@ button{
 .mobile-menu {
   position: fixed;
   top: 0;
+  bottom: 0;
   right: -280px;
   width: 260px;
   max-width: 80vw;
-  height: 100vh;
+  max-height: 100dvh;
   background: #fffaf5;
   z-index: 1210;
-  padding: 88px 20px 24px;
+  padding: 88px 20px 56px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   box-shadow: -6px 0 20px rgba(0,0,0,0.14);
   border-left: 1px solid rgba(255, 140, 0, 0.18);
   transition: right 0.25s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
 }
 
 .mobile-menu.open {
@@ -466,4 +470,11 @@ button{
   .primary-card h2 {
     font-size: 24px;
   }
+}
+
+.mobile-menu {
+  max-height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 32px;
 }
