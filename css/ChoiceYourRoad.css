@@ -761,6 +761,28 @@ margin:0 auto 6px auto;
 🍔ハンバーガーメニュー
 ========================= */
 
+.menu-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 5000;
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  background: #ff6a00;
+  color: white;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.28);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
 .mobile-menu {
   position: fixed;
   top: 0;
@@ -781,25 +803,6 @@ margin:0 auto 6px auto;
   border-left: 1px solid rgba(255, 106, 0, 0.12);
   box-sizing: border-box;
 }
-
-.mobile-menu {
-  position: fixed;
-  top: 0;
-  right: -260px;
-  width: 240px;
-  height: 100vh;
-  background: #fffaf6;
-  padding: 88px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  transition: right 0.25s ease;
-  z-index: 5001;
-  box-shadow: -6px 0 20px rgba(0,0,0,0.14);
-  overflow-y: auto;
-  border-left: 1px solid rgba(255, 106, 0, 0.12);
-}
-
 
 .mobile-menu.open {
   right: 0;
