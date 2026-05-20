@@ -38,6 +38,14 @@ document.addEventListener("DOMContentLoaded", function () {
     } else {
       themeSubmenu.classList.add("open");
       themeSubmenuToggle.setAttribute("aria-expanded", "true");
+
+      // サブメニューを開いたあと、見切れない位置までメニュー内スクロール
+      setTimeout(() => {
+        themeSubmenu.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest"
+        });
+      }, 100);
     }
   }
 
