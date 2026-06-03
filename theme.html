@@ -35,6 +35,7 @@
 
     <link rel="canonical" href="https://www.dokoiko-map.com/theme.html">
 
+    <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/ChoiceYourRoad.css">
     <link rel="stylesheet" href="css/TopStyle.css">
     <link rel="icon" href="image/dog.png" type="image/png">
@@ -56,31 +57,7 @@
             </p>
         </header>
 
-        <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
-            aria-controls="mobileMenu">
-            ☰
-        </button>
-
-        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
-
-        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
-            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
-            <a href="index.html">TOP</a>
-            <a href="spot.html">スポット</a>
-            <a href="area.html">地名</a>
-            <a href="theme.html">目的</a>
-            <a href="history.html">履歴</a>
-            <a href="about.html">このサイトについて</a>
-            <a href="contact.html">お問い合わせ</a>
-        </nav>
-
-        <nav class="page-nav">
-            <button onclick="location.href='index.html'">TOP</button>
-            <button onclick="location.href='spot.html'">スポット</button>
-            <button onclick="location.href='area.html'">地名</button>
-            <button class="active">目的</button>
-            <button onclick="location.href='history.html'">履歴</a>
-        </nav>
+        <div id="commonMenu"></div>
 
         <main class="menu">
 
@@ -138,7 +115,7 @@
 
     </div>
 
-    <script src="js/menu.js?v=1.0"></script>
+    <script src="js/menu.js"></script>
 </body>
 
 </html>
