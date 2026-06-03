@@ -34,6 +34,8 @@
     <meta name="twitter:image" content="https://www.dokoiko-map.com/image/dog.png">
 
     <link rel="canonical" href="https://www.dokoiko-map.com/spot.html">
+
+    <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/ChoiceYourRoad.css">
     <link rel="icon" href="image/dog.png" type="image/png">
 </head>
@@ -62,51 +64,8 @@
             </p>
         </header>
 
-        <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
-            aria-controls="mobileMenu">
-            ☰
-        </button>
-
-        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
-
-        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
-            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
-
-            <a href="index.html">TOP</a>
-            <a href="spot.html">スポット</a>
-            <a href="area.html">地名</a>
-
-            <div class="mobile-submenu-wrap">
-                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
-                    aria-controls="themeSubmenu">
-                    目的
-                </button>
-
-                <div class="mobile-submenu" id="themeSubmenu">
-                    <a href="theme.html">目的一覧</a>
-                    <a href="themes/gourmet.html">飲食店特化</a>
-                    <a href="themes/tourism.html">観光地探し</a>
-                    <a href="themes/nature.html">自然でデトックス</a>
-                    <a href="themes/goodRoad.html">気持ちよく走れる道</a>
-                </div>
-            </div>
-
-            <a href="history.html">履歴</a>
-            <a href="about.html">このサイトについて</a>
-            <a href="contact.html">お問い合わせ</a>
-        </nav>
-
-
-        <div class="desktop-layout">
-
-            <nav class="page-nav">
-                <button onclick="location.href='index.html'">TOP</button>
-                <button class="active">スポット</button>
-                <button onclick="location.href='area.html'">地名</button>
-                <button onclick="location.href='theme.html'">目的</button>
-                <button onclick="location.href='history.html'">履歴</button>
-            </nav>
-
+        <div id="commonMenu"></div>
+        
             <div class="main-area">
 
                 <section class="panel-top">
@@ -180,7 +139,7 @@
         </div>
 
         <script src="js/spot.js?v=3.5"></script>
-        <script src="js/menu.js?v=1.0"></script>
+        <script src="js/menu.js"></script>
         <script
             src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC46ImAYGQdDnN6gE6k25CCkemuCU5DXJ8&libraries=places&callback=initMap"
             async defer>
