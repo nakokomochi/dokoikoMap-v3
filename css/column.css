@@ -492,3 +492,35 @@ img {
         padding-left: 18px;
     }
 }
+
+/* ========================= 
+COLUMN LIST PC LAYOUT FIX 
+========================= */
+@media (min-width: 1200px) {
+  body .app {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    column-gap: 40px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  body .app>#commonMenu {
+    grid-column: 1;
+    grid-row: 1 / span 3;
+    width: 300px;
+  }
+
+  body .app>.column-top-header,
+  body .app>.column-list-container,
+  body .app>.footer {
+    grid-column: 2;
+    width: 100%;
+    max-width: 960px;
+    margin-left: 0;
+    margin-right: auto;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
