@@ -26,7 +26,8 @@
     <meta property="og:url" content="https://www.dokoiko-map.com/">
 
     <link rel="canonical" href="https://www.dokoiko-map.com/">
-
+    
+    <link rel="stylesheet" href="css/menu.css">
     <link rel="stylesheet" href="css/TopStyle.css">
     <link rel="icon" href="image/dog.png">
 </head>
@@ -61,39 +62,7 @@
             </div>
         </header>
 
-        <!-- スマホ用メニューボタン -->
-        <button class="menu-toggle" id="menuToggle" aria-label="メニューを開く" aria-expanded="false"
-            aria-controls="mobileMenu">
-            ☰
-        </button>
-
-        <!-- スマホ用メニュー背景 -->
-        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
-
-        <!-- スマホ用メニュー -->
-        <nav class="mobile-menu" id="mobileMenu" aria-hidden="true">
-            <button class="mobile-menu-close" id="mobileMenuClose" aria-label="メニューを閉じる">✕</button>
-            <a href="index.html">TOP</a>
-            <a href="spot.html">スポット</a>
-            <a href="area.html">地名</a>
-            <div class="mobile-submenu-wrap">
-                <button class="mobile-submenu-toggle" id="themeSubmenuToggle" aria-expanded="false"
-                    aria-controls="themeSubmenu">
-                    目的
-                </button>
-
-                <div class="mobile-submenu" id="themeSubmenu">
-                    <a href="theme.html">目的一覧</a>
-                    <a href="themes/gourmet.html">飲食店</a>
-                    <a href="themes/tourism.html">観光地探し</a>
-                    <a href="themes/nature.html">自然でデトックス</a>
-                    <a href="themes/goodRoad.html">気持ちよく走れる道</a>
-                </div>
-            </div>
-
-            <a href="about.html">このサイトについて</a>
-            <a href="contact.html">お問い合わせ</a>
-        </nav>
+        <div id="commonMenu"></div>
 
         <main class="menu">
 
@@ -158,9 +127,9 @@
 
 
             <div class="card">
-                <h2>どこいこMapについて</h2>
+                <h2>ご挨拶</h2>
                 <p>
-                    どこいこMapの使い方や、サイトを作った理由を紹介しています。
+                    どこいこMapをご利用いただきありがとうございます！ご挨拶させてください。
                 </p>
                 <button onclick="location.href='about.html'">
                     読んであげる
