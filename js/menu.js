@@ -72,8 +72,6 @@ document.addEventListener("DOMContentLoaded", function () {
         <details class="pc-menu-group">
           <summary>📝コラム</summary>
           <a href="/columns/index.html">コラム一覧</a>
-          <a href="/columns/kanto-touring.html">関東ツーリング</a>
-          <a href="/columns/beginner.html">初心者向け</a>
         </details>
 
         <a href="/history.html">履歴</a>
