@@ -346,10 +346,8 @@ p {
 ========================= */
 
 .lp-link-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 18px;
-    max-width: 920px;
+    grid-template-columns: 1fr;
+    max-width: 600px;
     margin: 42px auto 0;
 }
 
