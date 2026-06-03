@@ -124,6 +124,7 @@ body.goodRoad-theme {
 ========================= */
 
 @media (min-width: 900px) {
+
   .menu-toggle,
   .mobile-menu,
   .mobile-menu-overlay {
@@ -136,13 +137,14 @@ body.goodRoad-theme {
     top: 0;
     left: 0;
     z-index: 1000;
-    width: 230px;
+    width: 300px;
     height: 100vh;
     padding: 26px 18px;
     background: var(--menu-bg);
     border-right: 1px solid var(--menu-border);
     box-shadow: 4px 0 18px rgba(0, 0, 0, 0.06);
     overflow-y: auto;
+    max-width: 300px;
   }
 
   .pc-menu-logo {
@@ -207,5 +209,30 @@ body.goodRoad-theme {
 
   .app {
     margin-left: 230px;
+  }
+}
+
+/* =========================
+   PC MENU AVOID
+========================= */
+
+@media (min-width: 1200px) {
+  .column-page-layout {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 900px);
+    gap: 40px;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+  }
+
+  .column-container {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  #commonMenu {
+    width: 300px;
   }
 }
