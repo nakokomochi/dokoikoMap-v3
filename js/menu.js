@@ -39,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function () {
           </button>
 
           <div class="mobile-submenu" id="columnSubmenu">
-            <a href="/columns/index.html">コラム一覧</a>
+            <a href="/column_top.html">コラム一覧</a>
           </div>
         </div>
 
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         <details class="pc-menu-group">
           <summary>📝コラム</summary>
-          <a href="/columns/index.html">コラム一覧</a>
+          <a href="/column_top.html">コラム一覧</a>
         </details>
 
         <a href="/history.html">履歴</a>
