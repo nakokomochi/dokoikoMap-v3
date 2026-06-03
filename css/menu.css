@@ -1,0 +1,211 @@
+/* =========================
+   COMMON MENU
+========================= */
+
+body {
+  --menu-bg: #fffaf2;
+  --menu-text: #4a3328;
+  --menu-title: #3f2d22;
+  --menu-hover: #ffe7c2;
+  --menu-border: rgba(90, 59, 46, 0.12);
+}
+
+/* テーマページでは accent-color をメニューにも反映 */
+body.gourmet-theme,
+body.tourism-theme,
+body.nature-theme,
+body.goodRoad-theme {
+  --menu-bg: color-mix(in srgb, var(--accent-color) 8%, white);
+  --menu-text: color-mix(in srgb, var(--accent-color) 38%, #333);
+  --menu-title: color-mix(in srgb, var(--accent-color) 45%, #222);
+  --menu-hover: color-mix(in srgb, var(--accent-color) 18%, white);
+  --menu-border: color-mix(in srgb, var(--accent-color) 28%, transparent);
+}
+
+.pc-side-menu {
+  display: none;
+}
+
+/* スマホメニュー */
+.menu-toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1200;
+  width: 48px;
+  height: 48px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-color, #ff9f43);
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1190;
+  background: rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.mobile-menu-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-menu {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1210;
+  width: min(82vw, 320px);
+  height: 100vh;
+  padding: 72px 22px 24px;
+  background: var(--menu-bg);
+  box-shadow: -6px 0 18px rgba(0, 0, 0, 0.18);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+  overflow-y: auto;
+}
+
+.mobile-menu.open {
+  transform: translateX(0);
+}
+
+.mobile-menu-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  border: none;
+  background: transparent;
+  font-size: 26px;
+  color: var(--menu-text);
+  cursor: pointer;
+}
+
+.mobile-menu a,
+.mobile-submenu-toggle {
+  display: block;
+  width: 100%;
+  padding: 13px 10px;
+  border: none;
+  border-bottom: 1px solid var(--menu-border);
+  background: transparent;
+  color: var(--menu-text);
+  font-size: 16px;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mobile-submenu {
+  display: none;
+  padding: 6px 0 8px 14px;
+}
+
+.mobile-submenu.open {
+  display: block;
+}
+
+.mobile-submenu a {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* =========================
+   PC SIDE MENU
+========================= */
+
+@media (min-width: 900px) {
+  .menu-toggle,
+  .mobile-menu,
+  .mobile-menu-overlay {
+    display: none;
+  }
+
+  .pc-side-menu {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    width: 230px;
+    height: 100vh;
+    padding: 26px 18px;
+    background: var(--menu-bg);
+    border-right: 1px solid var(--menu-border);
+    box-shadow: 4px 0 18px rgba(0, 0, 0, 0.06);
+    overflow-y: auto;
+  }
+
+  .pc-menu-logo {
+    display: block;
+    margin-bottom: 18px;
+    padding: 10px 8px;
+    color: var(--menu-title);
+    text-decoration: none;
+  }
+
+  .pc-menu-title {
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .pc-side-menu a,
+  .pc-menu-group summary {
+    display: block;
+    padding: 9px 10px;
+    margin-bottom: 4px;
+    border-radius: 999px;
+    color: var(--menu-text);
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .pc-side-menu a:hover,
+  .pc-menu-group summary:hover {
+    background: var(--menu-hover);
+  }
+
+  .pc-menu-group {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+  }
+
+  .pc-menu-group summary {
+    list-style: none;
+    cursor: pointer;
+  }
+
+  .pc-menu-group summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .pc-menu-group summary::before {
+    content: "▶ ";
+  }
+
+  .pc-menu-group[open] summary::before {
+    content: "▼ ";
+  }
+
+  .pc-menu-group a {
+    padding: 7px 10px 7px 24px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .app {
+    margin-left: 230px;
+  }
+}
