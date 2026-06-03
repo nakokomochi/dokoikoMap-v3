@@ -12,124 +12,114 @@
         gtag('config', 'G-N2707VJLF6');
     </script>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-
-    <title>ツーリング・ドライブの行き先を地名でランダム提案｜エリアから目的地を決める【どこいこMap】</title>
-    <meta name="description"
-        content="ツーリングやドライブの行き先が決まらないときに、地名（エリア）をランダムで提案。出発地と移動時間から目的地候補を探せます。Googleマップでルートを見ながら決めたい方におすすめ。">
-
-    <meta name="robots" content="index, follow">
-    <meta name="format-detection" content="telephone=no">
-
-    <meta property="og:title" content="ツーリング・ドライブの行き先を地名でランダム提案｜どこいこMap 地名版">
-    <meta property="og:description" content="出発地と移動時間から、ツーリングやドライブの行き先となる地名（エリア）をランダムで提案。目的地が決まらないときに便利です。">
-    <meta property="og:image" content="https://www.dokoiko-map.com/image/dog.png">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://www.dokoiko-map.com/area.html">
-    <meta property="og:site_name" content="どこいこMap">
-    <meta property="og:locale" content="ja_JP">
-
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="ツーリング・ドライブの行き先を地名でランダム提案｜どこいこMap 地名版">
-    <meta name="twitter:description" content="出発地と移動時間から、目的地候補の地名（エリア）をランダムで提案します。">
-    <meta name="twitter:image" content="https://www.dokoiko-map.com/image/dog.png">
-
-    <link rel="canonical" href="https://www.dokoiko-map.com/area.html">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>どこいこMapについて</title>
 
     <link rel="stylesheet" href="css/menu.css">
-    <link rel="stylesheet" href="css/ChoiceYourRoad.css">
-    <link rel="icon" href="image/dog.png" type="image/png">
+    <link rel="stylesheet" href="css/about.css">
 </head>
 
 <body>
-    <div class="app">
 
-        <header class="header">
-            <a href="index.html">
-                <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
-            </a>
+    <div id="commonMenu"></div>
 
-            <h1 class="TitleName">
-                どこいこMap
-                <span class="subTitle">地名版<br>エリアから目的地をランダム提案</span>
-            </h1>
+    <div class="about-container">
+        <a href="index.html">
+            <img src="image/dog.png" alt="どこいこMapロゴ" class="site-icon">
+        </a>
 
-            <p class="page-lead">
-                ツーリングやドライブの行き先が決まらないときに、地名（エリア）から目的地候補をランダムで提案します。<br>
-                Googleマップを見ながらルートを決めたい方におすすめです。
-            </p>
-        </header>
+        <h1>どこいこMapについて</h1>
 
-        <div id="commonMenu"></div>
-
-        <p class="site-description">
-
-            地図を見ながら、<br>
-            自由に行き先を決めたい方におすすめです。
+        <p>
+            どこいこMapは、行き先に迷ったときにランダムでお出かけスポットを提案するWebアプリです。
         </p>
 
-        <section class="panel-top">
+        <p class="section-title">こんな場面ありますか？</p>
 
-            <label for="startLocation">出発地の住所：</label><br>
-            <input id="startLocation" type="text" placeholder="例：東京都渋谷区">
-            <br>
+        <ul class="problem-list">
+            <li>ツーリング先やドライブ先が決まらない</li>
+            <li>目的地に着いたけど次のプランがない</li>
+            <li>行きたいけど探すのが面倒…(´・ω・`)</li>
+        </ul>
 
-            <button onclick="getCurrentLocation()" class="location-btn">
-                📍 現在地を使用
-            </button>
+        <p>
+            そんな「どこ行く？」という悩む時間を、ボタン1つで解決できたらいいなと思い、このサービスを作成しました。
+        </p>
 
-            <p class="notice">
-                ※現在地は保存されません
+        <p>
+            条件から選出された完全ランダムな目的地を提案します。
+            観光・グルメ・自然など、さまざまなジャンルから新しい発見があるかもしれません。
+        </p>
+
+        <p>
+            次のツーリング・ドライブ先をぜひ見つけてみてください！
+        </p>
+
+        <p class="message">
+            素敵なお出かけになりますように✨<br>
+            少しでもお役に立てたら嬉しいです！
+        </p>
+
+        <div class="update-history">
+            <p class="section-title">更新履歴</p>
+            <p>
+                どこいこMapは、より使いやすいサービスを目指して少しずつ改善を続けています。
             </p>
 
-            <label for="timeSelect">移動時間：</label>
-            <select id="timeSelect">
-                <option value="30">30分</option>
-                <option value="60">1時間</option>
-                <option value="90">1時間30分</option>
-                <option value="120">2時間</option>
-                <option value="150">2時間30分</option>
-                <option value="180">3時間</option>
-            </select>
+            <ul class="update-list">
+                <li>
+                    <span class="update-date">2026年4月</span>
+                    各ページで目的地候補の選ばれ方を見直し、検索結果の精度を改善しました
+                </li>
+                <li>
+                    <span class="update-date">2026年4月</span>
+                    時間選択に「片道3時間」までを追加しました
+                </li>
+                <li>
+                    <span class="update-date">2026年4月</span>
+                    グルメ版で、立ち寄りやすいお店が表示されやすいよう検索内容を調整しました
+                </li>
+                <li>
+                    <span class="update-date">2026年4月</span>
+                    移動時間の考え方を見直し、より実際の感覚に近い候補が出やすいよう改善しました
+                </li>
+                <li>
+                    <span class="update-date">2026年4月</span>
+                    検索機能等、機能しない件について修正いたしました。
+                    ご迷惑をおかけしてしまい申し訳ございません。
+                </li>
+                <br>
+                <li>
+                    <span class="update-date">2026年5月</span>
+                    履歴ページを追加しました。
+                </li>
+                <li>
+                    <span class="update-date">2026年5月</span>
+                    テーマ版から、目的版と機能名を変更しました。
+                </li>
+                <li>
+                    <span class="update-date">2026年5月</span>
+                    結果がでた際、地図上のわんこピンをタップすることで、スポット名を表示する機能を追加しました。
+                </li>
 
-            <br>
+            </ul>
 
-            <label for="highway">高速道路/有料道路：</label>
-            <select id="highway">
-                <option value="yes">使う</option>
-                <option value="no">使わない</option>
-            </select>
+            
+        </div>
 
-            <br>
+        
+                    <p class="TanksMessage">アドバイスや不具合等、ご連絡いただきありがとうございます！<br>
+                    大変励みになります！<br>
+                    どこいこMapは目的地提案のお手伝いが出来るよう引き続き改善を行って参ります。<br>
+                    引き続き、どこいこMapをよろしくお願いいたします。</p>
 
-            <button onclick="searchArea()" class="main-button">
-                どこいこうかな！
-            </button>
+        <p class="author">サイト制作者：わんこライダー</p>
 
-            <div class="results" id="resultsBox">
-                <div id="result"></div>
-            </div>
-
-        </section>
-
-        <section class="panel-map">
-            <div id="map"></div>
-        </section>
-
-        <footer class="footer">
-            <p>© どこいこMap</p>
-            <a href="about.html">このサイトについて</a> |
-            <a href="contact.html">お問い合わせ</a>
-        </footer>
-
-        <script src="js/area.js"></script>
-        <script src="js/menu.js"></script>
-        <script
-            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC46ImAYGQdDnN6gE6k25CCkemuCU5DXJ8&callback=initMap"
-            async defer>
-            </script>
-
+        <a href="index.html" class="home-button">トップへ戻る</a>
+        <a href="contact.html" class="home-button">お問い合わせ</a>
     </div>
+
+    <script src="js/menu.js"></script>
 </body>
 
 </html>
