@@ -78,6 +78,7 @@ document.addEventListener("DOMContentLoaded", function () {
         <a href="/what-is.html">What is どこいこMap</a>
         <a href="/about.html">ご挨拶</a>
         <a href="/contact.html">お問い合わせ</a>
+        <a href="/privacy-policy.html">プライバシーポリシー</a>
       </nav>
     `;
   }
