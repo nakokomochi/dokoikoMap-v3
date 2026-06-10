@@ -531,3 +531,56 @@ COLUMN LIST PC LAYOUT FIX
     color: #999;
     margin-top: 32px;
 }
+
+/* =========================
+   PRIVACY POLICY
+========================= */
+
+.privacy-page {
+  max-width: 900px;
+}
+
+.privacy-page .column-article {
+  background: #fffaf4;
+  border: 1px solid #f3dfc8;
+  border-radius: 28px;
+  padding: 40px;
+}
+
+.privacy-page section {
+  margin-top: 36px;
+}
+
+.privacy-page h2 {
+  margin-bottom: 14px;
+  padding-left: 14px;
+  border-left: 6px solid #f59b42;
+  color: #3f2d22;
+}
+
+.privacy-page p {
+  margin: 0 0 14px;
+  line-height: 2;
+}
+
+.policy-date {
+  margin-top: 48px;
+  text-align: right;
+  color: #7b6656;
+  font-size: 14px;
+}
+
+.privh1{
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+  .privacy-page .column-article {
+    padding: 28px 20px;
+    border-radius: 22px;
+  }
+
+  .policy-date {
+    text-align: left;
+  }
+}
