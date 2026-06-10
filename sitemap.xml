@@ -54,11 +54,16 @@
   </url>
 
    <url>
-    <loc>https://www.dokoiko-map.com/kanto-touring1.html</loc>
+    <loc>https://www.dokoiko-map.com/column/kanto-touring1.html</loc>
   </url>
 
   <url>
-    <loc>https://www.dokoiko-map.com/touring-random-destination.html</loc>
+    <loc>https://www.dokoiko-map.com/column/touring-random-destination.html</loc>
   </url>
+
+  <url>
+    <loc>https://www.dokoiko-map.com/privacy-policy.html</loc>
+  </url>
+
 
 </urlset>
