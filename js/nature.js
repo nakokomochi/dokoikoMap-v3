@@ -604,6 +604,7 @@ async function searchThreeNature(lat, lng, distance, time, highway) {
             usedPlaceIds.add(spot.place_id);
 
             const routeInfo = await getRouteInfoToSpot(spot, highway);
+            const formattedAddress = await formatSpotAddress(spot);
 
             renderNatureResultCard(
                 box,
@@ -612,7 +613,8 @@ async function searchThreeNature(lat, lng, distance, time, highway) {
                 time,
                 highway,
                 index,
-                routeInfo
+                routeInfo,
+                formattedAddress
             );
         }
 
@@ -760,10 +762,69 @@ function scrollToNatureResultCard(index) {
 }
 
 
+ // ===============================
+ // 都道府県＋市区町村を取得
+ // ===============================
+ function formatSpotAddress(spot) {
+     return new Promise((resolve) => {
+         const location = spot.geometry?.location;
+
+         if (!location) {
+             resolve(spot.vicinity || "");
+             return;
+         }
+
+         const geocoder = new google.maps.Geocoder();
+
+         geocoder.geocode(
+             { location: location },
+             (results, status) => {
+                 if (status !== "OK" || !results?.length) {
+                     resolve(spot.vicinity || "");
+                     return;
+                 }
+
+                 const components = results[0].address_components;
+
+                 const getPart = (type) => {
+                     return components.find(c =>
+                         c.types.includes(type)
+                     )?.long_name || "";
+                 };
+
+                 const prefecture = getPart(
+                     "administrative_area_level_1"
+                 );
+
+                 const city = getPart(
+                     "locality"
+                 );
+
+                 const ward = getPart(
+                     "sublocality_level_1"
+                 );
+
+                 const town = getPart(
+                     "administrative_area_level_2"
+                 );
+
+                 const municipality = city || town;
+
+                 const address = prefecture +
+                     municipality +
+                     (city && ward && !city.includes(ward) ? ward : "");
+
+                 resolve(address || spot.vicinity || "");
+             }
+         );
+     });
+ }
+
+
 // ===============================
 // 結果カード描画
 // ===============================
-function renderNatureResultCard(box, spot, distance, time, highway, index, routeInfo = null) {
+function renderNatureResultCard(box, spot, distance, time, highway, index, routeInfo = null, formattedAddress = "") {
     const slat = spot.geometry.location.lat();
     const slng = spot.geometry.location.lng();
     const rating = spot.rating || "評価なし";
@@ -863,7 +924,7 @@ ${photoUrl ? `
 <div class="spot-name">${spot.name}</div>
 <div class="spot-copy">${catchCopy || "自然を感じられそうなスポットです。"}</div>
 
-📍 ${spot.vicinity || ""}<br>
+📍 ${formattedAddress || spot.vicinity || ""}<br>
 ⭐ ${rating} (${reviews}件)<br>
 🏷 ${typeLabel}<br>
 🚗 ${displayDistanceText}<br>
