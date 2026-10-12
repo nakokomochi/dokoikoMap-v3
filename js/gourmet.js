@@ -32,6 +32,77 @@ const SEARCH_RETRY_LIMIT = 1;
 // ルート判定用
 const TIME_TOLERANCE_MINUTES = 20;
 
+
+ // ===============================
+ // 都道府県＋市区町村を取得
+ // ===============================
+ const spotAddressCache = new Map();
+
+ async function getSpotMunicipalityAddress(spot) {
+     const location = spot?.geometry?.location;
+     const fallback = spot?.vicinity || "住所情報なし";
+
+     if (!location) return fallback;
+
+     const lat = typeof location.lat === "function"
+         ? location.lat() : location.lat;
+
+     const lng = typeof location.lng === "function"
+         ? location.lng() : location.lng;
+
+     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+         return fallback;
+     }
+
+     const key = spot.place_id || `${lat},${lng}`;
+
+     if (spotAddressCache.has(key)) {
+         return spotAddressCache.get(key);
+     }
+
+     const promise = new Promise((resolve) => {
+         const geocoder = new google.maps.Geocoder();
+
+         geocoder.geocode(
+             { location: { lat, lng } },
+             (results, status) => {
+                 if (status !== "OK" || !results?.length) {
+                     resolve(fallback);
+                     return;
+                 }
+
+                 for (const result of results) {
+                     const parts = result.address_components || [];
+
+                     const getPart = (type) =>
+                         parts.find(c => c.types.includes(type))
+                             ?.long_name || "";
+
+                     const prefecture = getPart(
+                         "administrative_area_level_1"
+                     );
+
+                     const city = getPart("locality");
+                     const county = getPart(
+                         "administrative_area_level_2"
+                     );
+
+                     if (prefecture && (city || county)) {
+                         resolve(prefecture + (city || county));
+                         return;
+                     }
+                 }
+
+                 resolve(fallback);
+             }
+         );
+     });
+
+     spotAddressCache.set(key, promise);
+     return promise;
+ }
+
+
 // ===============================
 // Google Map 初期表示
 // ===============================
@@ -611,6 +682,7 @@ async function searchThreeGourmet(lat, lng, distance, time, highway) {
             usedPlaceIds.add(spot.place_id);
 
             const routeInfo = await getRouteInfoToSpot(spot, highway);
+            const formattedAddress = await getSpotMunicipalityAddress(spot);
 
             renderGourmetResultCard(
                 box,
@@ -619,7 +691,8 @@ async function searchThreeGourmet(lat, lng, distance, time, highway) {
                 time,
                 highway,
                 index,
-                routeInfo
+                routeInfo,
+                formattedAddress
             );
         }
 
@@ -769,7 +842,7 @@ function scrollToGourmetResultCard(index) {
 // ===============================
 // 結果カード描画
 // ===============================
-function renderGourmetResultCard(box, spot, distance, time, highway, index, routeInfo = null) {
+function renderGourmetResultCard(box, spot, distance, time, highway, index, routeInfo = null, formattedAddress = "") {
     const slat = spot.geometry.location.lat();
     const slng = spot.geometry.location.lng();
     const rating = spot.rating || "評価なし";
@@ -864,7 +937,7 @@ ${photoUrl ? `
 <div class="spot-name">${spot.name}</div>
 <div class="spot-copy">${catchCopy || "気になるグルメスポットです。"}</div>
 
-📍 ${spot.vicinity || ""}<br>
+📍 ${formattedAddress || spot.vicinity || "住所情報なし"}<br>
 ⭐ ${rating} (${reviews}件)<br>
 🏷 ${typeLabel}<br>
 🚗 ${displayDistanceText}<br>
