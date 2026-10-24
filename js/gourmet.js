@@ -32,77 +32,6 @@ const SEARCH_RETRY_LIMIT = 1;
 // ルート判定用
 const TIME_TOLERANCE_MINUTES = 20;
 
-
- // ===============================
- // 都道府県＋市区町村を取得
- // ===============================
- const spotAddressCache = new Map();
-
- async function getSpotMunicipalityAddress(spot) {
-     const location = spot?.geometry?.location;
-     const fallback = spot?.vicinity || "住所情報なし";
-
-     if (!location) return fallback;
-
-     const lat = typeof location.lat === "function"
-         ? location.lat() : location.lat;
-
-     const lng = typeof location.lng === "function"
-         ? location.lng() : location.lng;
-
-     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-         return fallback;
-     }
-
-     const key = spot.place_id || `${lat},${lng}`;
-
-     if (spotAddressCache.has(key)) {
-         return spotAddressCache.get(key);
-     }
-
-     const promise = new Promise((resolve) => {
-         const geocoder = new google.maps.Geocoder();
-
-         geocoder.geocode(
-             { location: { lat, lng } },
-             (results, status) => {
-                 if (status !== "OK" || !results?.length) {
-                     resolve(fallback);
-                     return;
-                 }
-
-                 for (const result of results) {
-                     const parts = result.address_components || [];
-
-                     const getPart = (type) =>
-                         parts.find(c => c.types.includes(type))
-                             ?.long_name || "";
-
-                     const prefecture = getPart(
-                         "administrative_area_level_1"
-                     );
-
-                     const city = getPart("locality");
-                     const county = getPart(
-                         "administrative_area_level_2"
-                     );
-
-                     if (prefecture && (city || county)) {
-                         resolve(prefecture + (city || county));
-                         return;
-                     }
-                 }
-
-                 resolve(fallback);
-             }
-         );
-     });
-
-     spotAddressCache.set(key, promise);
-     return promise;
- }
-
-
 // ===============================
 // Google Map 初期表示
 // ===============================
@@ -390,33 +319,60 @@ function saveGourmetHistoryItem(data) {
     localStorage.setItem(DOKOIKO_HISTORY_KEY, JSON.stringify(filtered.slice(0, DOKOIKO_HISTORY_MAX)));
 }
 
-// ===============================
-// 共有
-// ===============================
-function shareGourmetResult(index) {
-    const card = document.getElementById(`result${index + 1}`);
-    if (!card) return;
 
-    const shareUrl = card.dataset.mapUrl || location.href;
-    const shareText = card.dataset.shareText || "どこいこMapでグルメスポットを見つけたよ！";
+ // ===============================
+ // 共有（目的地のみ・出発地は共有しない）
+ // ===============================
+ function shareGourmetResult(index) {
+     const card = document.getElementById(`result${index + 1}`);
+     if (!card) return;
 
-    if (navigator.share) {
-        navigator.share({
-            title: "どこいこMap",
-            text: shareText,
-            url: shareUrl
-        }).catch(() => { });
-        return;
-    }
+     const spotName = card.dataset.spotName;
+     const placeId = card.dataset.placeId;
 
-    const xUrl =
-        "https://twitter.com/intent/tweet?text=" +
-        encodeURIComponent(shareText) +
-        "&url=" +
-        encodeURIComponent(shareUrl);
+     // 目的地が取得できなければ共有しない
+     if (!spotName || !spotName.trim()) {
+         alert("共有するグルメスポット情報が見つかりませんでした。");
+         return;
+     }
 
-    window.open(xUrl, "_blank");
-}
+     // 目的地だけのGoogleマップURLを生成
+     const params = new URLSearchParams({
+         api: "1",
+         query: spotName.trim()
+     });
+
+     if (placeId && placeId.trim()) {
+         params.set("query_place_id", placeId.trim());
+     }
+
+     const shareUrl =
+         "https://www.google.com/maps/search/?" + params.toString();
+
+     const shareText =
+         "🏍️ どこいこMapで見つけたグルメスポット！\n" +
+         "📍 " + spotName.trim();
+
+     // スマホなどの共有機能
+     if (navigator.share) {
+         navigator.share({
+             title: "どこいこMap",
+             text: shareText,
+             url: shareUrl
+         }).catch(() => {});
+         return;
+     }
+
+     // Xで共有
+     const xUrl =
+         "https://twitter.com/intent/tweet?text=" +
+         encodeURIComponent(shareText) +
+         "&url=" +
+         encodeURIComponent(shareUrl);
+
+     window.open(xUrl, "_blank", "noopener,noreferrer");
+ }
+
 
 // ===============================
 // 最大距離計算
@@ -682,7 +638,6 @@ async function searchThreeGourmet(lat, lng, distance, time, highway) {
             usedPlaceIds.add(spot.place_id);
 
             const routeInfo = await getRouteInfoToSpot(spot, highway);
-            const formattedAddress = await getSpotMunicipalityAddress(spot);
 
             renderGourmetResultCard(
                 box,
@@ -691,8 +646,7 @@ async function searchThreeGourmet(lat, lng, distance, time, highway) {
                 time,
                 highway,
                 index,
-                routeInfo,
-                formattedAddress
+                routeInfo
             );
         }
 
@@ -842,7 +796,7 @@ function scrollToGourmetResultCard(index) {
 // ===============================
 // 結果カード描画
 // ===============================
-function renderGourmetResultCard(box, spot, distance, time, highway, index, routeInfo = null, formattedAddress = "") {
+function renderGourmetResultCard(box, spot, distance, time, highway, index, routeInfo = null) {
     const slat = spot.geometry.location.lat();
     const slng = spot.geometry.location.lng();
     const rating = spot.rating || "評価なし";
@@ -852,8 +806,6 @@ function renderGourmetResultCard(box, spot, distance, time, highway, index, rout
     const catchCopy = buildGourmetCatchCopy(spot);
     const mapUrl = buildGoogleMapsUrl(spot, highway);
 
-    const shareText =
-        `${spot.name} を見つけたよ！ 🍽グルメ / ⭐${rating} #どこいこMap`;
 
     const infoRatingText = spot.rating ? `⭐${spot.rating}` : "評価なし";
 
@@ -921,7 +873,8 @@ function renderGourmetResultCard(box, spot, distance, time, highway, index, rout
     });
 
     box.dataset.mapUrl = mapUrl;
-    box.dataset.shareText = shareText;
+box.dataset.spotName = spot.name || "";
+box.dataset.placeId = spot.place_id || "";
 
     box.innerHTML = `
 <div class="genre">
@@ -937,7 +890,7 @@ ${photoUrl ? `
 <div class="spot-name">${spot.name}</div>
 <div class="spot-copy">${catchCopy || "気になるグルメスポットです。"}</div>
 
-📍 ${formattedAddress || spot.vicinity || "住所情報なし"}<br>
+📍 ${spot.vicinity || ""}<br>
 ⭐ ${rating} (${reviews}件)<br>
 🏷 ${typeLabel}<br>
 🚗 ${displayDistanceText}<br>
