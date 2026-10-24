@@ -383,15 +383,39 @@ function saveNatureHistoryItem(data) {
 }
 
 // ===============================
-// 共有
+// 共有（目的地のみ・出発地は共有しない）
 // ===============================
 function shareNatureResult(index) {
     const card = document.getElementById(`result${index + 1}`);
     if (!card) return;
 
-    const shareUrl = card.dataset.mapUrl || location.href;
-    const shareText = card.dataset.shareText || "どこいこMapで自然スポットを見つけたよ！";
+    const spotName = card.dataset.spotName;
+    const placeId = card.dataset.placeId;
 
+    // 目的地が取得できなければ共有しない
+    if (!spotName || !spotName.trim()) {
+        alert("共有する自然スポット情報が見つかりませんでした。");
+        return;
+    }
+
+    // 目的地だけのGoogleマップURLを生成
+    const params = new URLSearchParams({
+        api: "1",
+        query: spotName.trim()
+    });
+
+    if (placeId && placeId.trim()) {
+        params.set("query_place_id", placeId.trim());
+    }
+
+    const shareUrl =
+        "https://www.google.com/maps/search/?" + params.toString();
+
+    const shareText =
+        "🏍️ どこいこMapで見つけた自然スポット！\n" +
+        "📍 " + spotName.trim();
+
+    // スマホなどの共有機能
     if (navigator.share) {
         navigator.share({
             title: "どこいこMap",
@@ -401,13 +425,14 @@ function shareNatureResult(index) {
         return;
     }
 
+    // Xで共有
     const xUrl =
         "https://twitter.com/intent/tweet?text=" +
         encodeURIComponent(shareText) +
         "&url=" +
         encodeURIComponent(shareUrl);
 
-    window.open(xUrl, "_blank");
+    window.open(xUrl, "_blank", "noopener,noreferrer");
 }
 
 // ===============================
@@ -834,8 +859,6 @@ function renderNatureResultCard(box, spot, distance, time, highway, index, route
     const catchCopy = buildNatureCatchCopy(spot);
     const mapUrl = buildGoogleMapsUrl(spot, highway);
 
-    const shareText =
-        `${spot.name} を見つけたよ！ 🌳自然 / ⭐${rating} #どこいこMap`;
 
     const infoRatingText = spot.rating ? `⭐${spot.rating}` : "評価なし";
 
@@ -908,7 +931,8 @@ function renderNatureResultCard(box, spot, distance, time, highway, index, route
     });
 
     box.dataset.mapUrl = mapUrl;
-    box.dataset.shareText = shareText;
+box.dataset.spotName = spot.name || "";
+box.dataset.placeId = spot.place_id || "";
 
     box.innerHTML = `
 <div class="genre">
